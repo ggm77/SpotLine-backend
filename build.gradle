@@ -6,6 +6,7 @@ plugins {
 
 group = 'com.pohanghang'
 version = '0.0.1-SNAPSHOT'
+description = '오프라인 로그 수집 솔루션'
 
 java {
 	toolchain {
@@ -15,6 +16,10 @@ java {
 
 repositories {
 	mavenCentral()
+}
+
+springBoot {
+	buildInfo()
 }
 
 dependencies {
