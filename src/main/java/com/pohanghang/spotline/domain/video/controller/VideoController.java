@@ -1,9 +1,6 @@
 package com.pohanghang.spotline.domain.video.controller;
 
-import com.pohanghang.spotline.domain.video.dto.VideoFeedbackResponseDto;
-import com.pohanghang.spotline.domain.video.dto.VideoInfoResponseDto;
-import com.pohanghang.spotline.domain.video.dto.VideoStatusResponseDto;
-import com.pohanghang.spotline.domain.video.dto.VideoUploadResponseDto;
+import com.pohanghang.spotline.domain.video.dto.*;
 import com.pohanghang.spotline.domain.video.entity.Status;
 import com.pohanghang.spotline.domain.video.entity.Weather;
 import lombok.RequiredArgsConstructor;
@@ -31,6 +28,30 @@ public class VideoController {
 
         // mock
         return ResponseEntity.ok().body(new VideoUploadResponseDto(1L));
+    }
+
+    @GetMapping("/video")
+    public ResponseEntity<VideoInfoListResponseDto> getAllVideoInfo() {
+
+        // mock
+        return ResponseEntity.ok().body(new VideoInfoListResponseDto(
+                Arrays.asList(
+                    new VideoInfoResponseDto(
+                        1L,
+                        10,
+                        50,
+                        10,
+                        5,
+                        5,
+                        1,
+                        2,
+                        Arrays.asList(0, 10, 0, 0, 0, 0, 0, 0, 0),
+                        LocalDateTime.now(),
+                        LocalDateTime.now(),
+                        Weather.SUNNY
+                    )
+                )
+        ));
     }
 
     @GetMapping("/video/{id}/status")
