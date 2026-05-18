@@ -1,4 +1,4 @@
-package com.pohanghang.spotline.domain.analytics.entity;
+package com.pohanghang.spotline.domain.video.entity;
 
 public enum Status {
     PROCESSING,

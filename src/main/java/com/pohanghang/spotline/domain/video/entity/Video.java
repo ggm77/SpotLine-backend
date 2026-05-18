@@ -31,6 +31,9 @@ public class Video {
     @Column(nullable = false)
     private LocalDateTime endAt;
 
+    @Column(nullable = false)
+    private Status status;
+
     @CreatedDate
     private LocalDateTime createdAt;
 
@@ -38,10 +41,12 @@ public class Video {
     public Video(
             final String name,
             final LocalDateTime startAt,
-            final LocalDateTime endAt
+            final LocalDateTime endAt,
+            final Status status
     ) {
         this.name = name;
         this.startAt = startAt;
         this.endAt = endAt;
+        this.status = status;
     }
 }

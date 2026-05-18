@@ -1,6 +1,8 @@
 package com.pohanghang.spotline.domain.video.controller.service;
 
+import com.pohanghang.spotline.domain.video.dto.VideoStatusResponseDto;
 import com.pohanghang.spotline.domain.video.dto.VideoUploadResponseDto;
+import com.pohanghang.spotline.domain.video.entity.Status;
 import com.pohanghang.spotline.domain.video.entity.Video;
 import com.pohanghang.spotline.domain.video.repository.VideoRepository;
 import com.pohanghang.spotline.global.exception.CustomException;
@@ -48,12 +50,15 @@ public class VideoService {
                 .name(path.getFileName().toString())
                 .startAt(startAt)
                 .endAt(endAt)
+                .status(Status.PROCESSING)
                 .build();
 
         // 5) DB 저장
         return new VideoUploadResponseDto(
                 videoRepository.save(video).getId()
         );
+
+        // 6) 비디오 분석 시작
     }
 
     public Resource downloadVideo(final Long id) {
@@ -68,5 +73,19 @@ public class VideoService {
 
         // 3) 파일 리소스 가져오기
         return storageManager.getFile(video.getName());
+    }
+
+    public VideoStatusResponseDto getStatus(final Long id) {
+        // 1) null 검사
+        if (id == null) {
+            throw new CustomException(ExceptionCode.INVALID_REQUEST);
+        }
+
+        // 2) 영상 조회
+        final Video video = videoRepository.findById(id)
+                .orElseThrow(() -> new CustomException(ExceptionCode.VIDEO_NOT_FOUND));
+
+        // 3) 결과 리턴
+        return new VideoStatusResponseDto(video.getStatus());
     }
 }

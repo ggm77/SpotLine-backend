@@ -3,11 +3,10 @@ package com.pohanghang.spotline.domain.video.controller;
 import com.pohanghang.spotline.domain.video.controller.service.VideoService;
 import com.pohanghang.spotline.domain.video.dto.VideoStatusResponseDto;
 import com.pohanghang.spotline.domain.video.dto.VideoUploadResponseDto;
-import com.pohanghang.spotline.domain.analytics.entity.Status;
+import com.pohanghang.spotline.domain.video.entity.Status;
 import com.pohanghang.spotline.global.exception.CustomException;
 import com.pohanghang.spotline.global.exception.constants.ExceptionCode;
 import lombok.RequiredArgsConstructor;
-import org.springframework.core.io.ByteArrayResource;
 import org.springframework.core.io.Resource;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
@@ -58,7 +57,6 @@ public class VideoController {
             @PathVariable final Long id
     ) {
 
-        //mock
-        return ResponseEntity.ok(new VideoStatusResponseDto(Status.COMPLETE));
+        return ResponseEntity.ok(videoService.getStatus(id));
     }
 }
