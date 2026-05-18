@@ -42,10 +42,10 @@ public class VideoService {
         // 2) 파일 저장
         final Path path = storageManager.save(multipartFile);
 
-        // 3) 정상 mp4인지 검사
-        if (!VideoValidator.isValidMp4(path)){
-            throw new CustomException(ExceptionCode.INVALID_FILE);
-        }
+//        // 3) 정상 mp4인지 검사
+//        if (!VideoValidator.isValidMp4(path)){
+//            throw new CustomException(ExceptionCode.INVALID_FILE);
+//        }
 
         // 4) 엔티티 생성
         final Video video = Video.builder()

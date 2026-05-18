@@ -108,13 +108,9 @@ public class RawAnalysisParser {
      * @param json Python 분석 서버가 반환한 JSON 문자열
      * @return 기존 시스템에서 사용하는 RawAnalyticsDto
      */
-    public static RawAnalyticsDto parse(final String json) {
-        try {
-            final DailyAnalysis dailyAnalysis = objectMapper.readValue(json, DailyAnalysis.class);
-            return toRawAnalyticsDto(dailyAnalysis);
-        } catch (Exception e) {
-            throw new RuntimeException("DailyAnalysis JSON 파싱 실패", e);
-        }
+    public static RawAnalyticsDto parse(final String json) throws Exception{
+        final DailyAnalysis dailyAnalysis = objectMapper.readValue(json, DailyAnalysis.class);
+        return toRawAnalyticsDto(dailyAnalysis);
     }
 
     // ========== 내부 변환 로직 ==========

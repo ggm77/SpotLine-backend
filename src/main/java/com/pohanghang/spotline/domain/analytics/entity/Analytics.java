@@ -49,7 +49,7 @@ public class Analytics {
     private Double temperature;
 
     @Lob
-    @Column(nullable = false)
+    @Column(columnDefinition = "TEXT", nullable = false)
     private String rawData; // 영상에서 추출한 원본 데이터 그대로
 
     @OneToMany(mappedBy = "analytics", cascade = CascadeType.ALL, orphanRemoval = true)

@@ -79,9 +79,11 @@ public class VideoAnalyze {
                 final Analytics analytics = RawAnalysisConverter.toEntity(rawAnalyticsDto, chunkStartAt, chunkEndAt);
                 analyticsRepository.save(analytics);
 
-            } catch (Exception e) {
+            } catch (Exception ex) {
                 // 예외 발생 시 로그를 남기고 비즈니스 요구사항에 따라 멈추거나 다음  chunk로 진행
-                log.error("{}번째 세그먼트 처리 중 오류 발생: {}",chunkIndex, e.getMessage());
+                log.error("{}번째 세그먼트 처리 중 오류 발생: {}",chunkIndex, ex.getMessage());
+                startTime += CHUNK_SIZE;
+                chunkIndex++;
                 continue;
             } finally {
                 // 3. 분석 완료 후 세그먼트 파일 즉시 삭제 (디스크 공간 확보)
