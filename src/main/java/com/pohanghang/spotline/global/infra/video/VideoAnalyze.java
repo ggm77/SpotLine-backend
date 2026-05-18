@@ -77,6 +77,7 @@ public class VideoAnalyze {
 
                 // 분석 결과 파싱해서 DB 저장
                 final Analytics analytics = RawAnalysisConverter.toEntity(rawAnalyticsDto, chunkStartAt, chunkEndAt);
+                analytics.updateVideo(video);
                 analyticsRepository.save(analytics);
 
             } catch (Exception ex) {
