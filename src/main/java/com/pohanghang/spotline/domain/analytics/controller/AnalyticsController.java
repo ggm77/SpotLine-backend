@@ -1,6 +1,7 @@
 package com.pohanghang.spotline.domain.analytics.controller;
 
 import com.pohanghang.spotline.domain.analytics.dto.*;
+import com.pohanghang.spotline.domain.analytics.service.AnalyticsService;
 import com.pohanghang.spotline.domain.video.entity.PerformanceResult;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
@@ -13,12 +14,13 @@ import java.util.Arrays;
 @RestController
 public class AnalyticsController {
 
+    private final AnalyticsService analyticsService;
+
     @GetMapping("/analytics/raw")
     public ResponseEntity<RawAnalyticsDto> getRawAnalytics(
             @RequestParam(value = "videoId") final Long videoId) {
 
-        // mock
-        return ResponseEntity.ok(RawAnalyticsDto.getMock());
+        return ResponseEntity.ok(analyticsService.getRawAnalytics(videoId));
     }
 
     @PostMapping("/analytics/hourly-population")

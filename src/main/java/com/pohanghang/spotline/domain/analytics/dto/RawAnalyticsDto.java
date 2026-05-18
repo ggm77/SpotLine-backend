@@ -4,14 +4,14 @@ import java.util.Arrays;
 import java.util.List;
 
 public record RawAnalyticsDto(
-        Summary summary
+        Summary summary,
+        List<Persons> persons
 ) {
 
     public record Summary(
             Integer totalVisitors,
             String peakCongestion,
-            Double avgDwellTimeSeconds,
-            List<Persons> persons
+            Double avgDwellTimeSeconds
     ) {}
 
     public record Persons(
@@ -31,18 +31,16 @@ public record RawAnalyticsDto(
 
     public static RawAnalyticsDto getMock() {
         return new RawAnalyticsDto(
-                new Summary(
-                        76, "medium", 11.242,
-                        Arrays.asList(new Persons(
-                                1,
-                                "female",
-                                "20s",
-                                "00:00:00.000",
-                                "00:00:19.476",
-                                19.476,
-                                new EntranceEvent("enter", "00:00:19.476")
-                        ))
-                )
+                new Summary(76, "medium", 11.242),
+                Arrays.asList(new Persons(
+                        1,
+                        "female",
+                        "20s",
+                        "00:00:00.000",
+                        "00:00:19.476",
+                        19.476,
+                        new EntranceEvent("enter", "00:00:19.476")
+                ))
         );
     }
 }
