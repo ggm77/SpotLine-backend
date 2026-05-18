@@ -2,6 +2,8 @@ package com.pohanghang.spotline.global.infra.openmeteo;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.pohanghang.spotline.domain.analytics.entity.Weather;
+import com.pohanghang.spotline.global.exception.CustomException;
+import com.pohanghang.spotline.global.exception.constants.ExceptionCode;
 import com.pohanghang.spotline.global.infra.openmeteo.dto.OpenMeteoResponseDto;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Component;
@@ -51,7 +53,7 @@ public class OpenMeteoClient {
                 .block();
 
         if (response == null || response.current() == null) {
-            throw new RuntimeException("Failed to get weather data from Open-Meteo API");
+            throw new CustomException(ExceptionCode.INTERNAL_SERVER_ERROR);
         }
 
         Double temperature = response.current().temperature2m();
@@ -69,7 +71,7 @@ public class OpenMeteoClient {
             final LocalDateTime targetAt
     ) {
         if (targetAt == null) {
-            throw new RuntimeException("Target date time is required to get weather data");
+            throw new CustomException(ExceptionCode.INVALID_REQUEST);
         }
 
         final LocalDate targetDate = targetAt.toLocalDate();
@@ -77,7 +79,7 @@ public class OpenMeteoClient {
                 .uri(uriBuilder -> uriBuilder
                         .scheme("https")
                         .host(resolveApiHost(targetDate))
-                        .path(resolveApiPath(targetDate))
+                        .replacePath(resolveApiPath(targetDate))
                         .queryParam("latitude", latitude)
                         .queryParam("longitude", longitude)
                         .queryParam("hourly", "temperature_2m,precipitation,weather_code")
@@ -90,7 +92,7 @@ public class OpenMeteoClient {
                 .block();
 
         if (response == null || response.hourly() == null || response.hourly().time() == null) {
-            throw new RuntimeException("Failed to get hourly weather data from Open-Meteo API");
+            throw new CustomException(ExceptionCode.INTERNAL_SERVER_ERROR);
         }
 
         final int targetIndex = findTargetHourlyIndex(response.hourly(), targetAt);
@@ -128,7 +130,7 @@ public class OpenMeteoClient {
             }
         }
 
-        throw new RuntimeException("Failed to find weather data at target time: " + targetHour);
+        throw new CustomException(ExceptionCode.INTERNAL_SERVER_ERROR);
     }
 
     private <T> T getValue(
@@ -137,7 +139,7 @@ public class OpenMeteoClient {
             final String fieldName
     ) {
         if (values == null || values.size() <= index) {
-            throw new RuntimeException("Failed to get hourly weather field: " + fieldName);
+            throw new CustomException(ExceptionCode.INTERNAL_SERVER_ERROR);
         }
 
         return values.get(index);
@@ -161,10 +163,10 @@ public class OpenMeteoClient {
             Weather weather
     ) {}
 
-    private record OpenMeteoHourlyResponseDto(
+    public record OpenMeteoHourlyResponseDto(
             Hourly hourly
     ) {
-        private record Hourly(
+        public record Hourly(
                 List<String> time,
                 @JsonProperty("temperature_2m") List<Double> temperature2m,
                 List<Double> precipitation,

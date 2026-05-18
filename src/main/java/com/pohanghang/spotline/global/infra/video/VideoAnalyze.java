@@ -45,7 +45,6 @@ public class VideoAnalyze {
     private int CHUNK_SIZE;
 
     @Async("asyncExecutor")
-    @Transactional
     public void analyze(
             final Video video,
             final LocalDateTime startAt,
@@ -88,9 +87,6 @@ public class VideoAnalyze {
             } catch (Exception ex) {
                 // 예외 발생 시 로그를 남기고 비즈니스 요구사항에 따라 멈추거나 다음  chunk로 진행
                 log.error("{}번째 세그먼트 처리 중 오류 발생: {}",chunkIndex, ex.getMessage());
-                startTime += CHUNK_SIZE;
-                chunkIndex++;
-                continue;
             } finally {
                 // 3. 분석 완료 후 세그먼트 파일 즉시 삭제 (디스크 공간 확보)
                 if (chunkPath.toFile().exists()) {
@@ -109,6 +105,7 @@ public class VideoAnalyze {
         final Video savedVideo = videoRepository.findById(video.getId())
                 .orElseThrow(() -> new CustomException(ExceptionCode.VIDEO_NOT_FOUND));
         savedVideo.updateStatus(Status.COMPLETE);
+        videoRepository.save(savedVideo);
         log.info("영상 처리 성공: {}", video.getName());
     }
 
@@ -171,7 +168,7 @@ public class VideoAnalyze {
             final int timeoutSecond
     ) {
         final ProcessBuilder pb = new ProcessBuilder(command);
-        pb.redirectErrorStream(false);
+        pb.redirectErrorStream(true);
 
         try {
             final Process p = pb.start();
