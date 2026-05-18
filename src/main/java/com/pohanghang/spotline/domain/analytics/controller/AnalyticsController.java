@@ -23,20 +23,19 @@ public class AnalyticsController {
         return ResponseEntity.ok(analyticsService.getRawAnalytics(videoId));
     }
 
+    @PostMapping("/analytics/core-customers")
+    public ResponseEntity<CoreCustomerResponseDto> getCoreCustomers(
+            @RequestBody final DefaultStartAtEndAtRequestDto defaultStartAtEndAtRequestDto) {
+
+        return ResponseEntity.ok(analyticsService.getCoreCustomers(defaultStartAtEndAtRequestDto));
+    }
+
     @PostMapping("/analytics/hourly-population")
     public ResponseEntity<AgeGroupDistributionDto> getHourlyPopulation(
             @RequestBody final DefaultStartAtEndAtRequestDto defaultStartAtEndAtRequestDto) {
 
         // mock
         return ResponseEntity.ok(new AgeGroupDistributionDto(0, 60, 10, 10, 10, 10));
-    }
-
-    @PostMapping("/analytics/core-customers")
-    public ResponseEntity<CoreCustomerResponseDto> getCoreCustomers(
-            @RequestBody final DefaultStartAtEndAtRequestDto defaultStartAtEndAtRequestDto) {
-
-        // mock
-        return ResponseEntity.ok(new CoreCustomerResponseDto("MAN", "20s"));
     }
 
     @PostMapping("/analytics/weather-impact")
