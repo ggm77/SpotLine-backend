@@ -1,5 +1,6 @@
 package com.pohanghang.spotline.domain.video.controller;
 
+import com.pohanghang.spotline.domain.video.controller.service.VideoService;
 import com.pohanghang.spotline.domain.video.dto.VideoStatusResponseDto;
 import com.pohanghang.spotline.domain.video.dto.VideoUploadResponseDto;
 import com.pohanghang.spotline.domain.analytics.entity.Status;
@@ -19,6 +20,8 @@ import java.time.LocalDateTime;
 @RestController
 public class VideoController {
 
+    private final VideoService videoService;
+
     @PostMapping(value = "/video", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<VideoUploadResponseDto> uploadVideo(
             @RequestPart(value = "file") final MultipartFile multipartFile,
@@ -26,8 +29,7 @@ public class VideoController {
             @RequestParam(value = "endAt") final LocalDateTime endAt
     ) {
 
-        //mock
-        return ResponseEntity.ok(new VideoUploadResponseDto(1L));
+        return ResponseEntity.ok(videoService.uploadVideo(multipartFile, startAt, endAt));
     }
 
     @GetMapping("/video/{id}")
