@@ -31,9 +31,29 @@ public interface AnalyticsRepository extends JpaRepository<Analytics, Long> {
             @Param("endAt") final LocalDateTime endAt
     );
 
+    @Query("""
+            SELECT p.ageGroup AS ageGroup,
+                   SUM(p.count) AS totalCount
+            FROM Analytics a
+            JOIN a.persons p
+            WHERE a.startAt < :endAt
+              AND a.endAt > :startAt
+            GROUP BY p.ageGroup
+            """)
+    List<HourlyPopulationGroup> findHourlyPopulationGroups(
+            @Param("startAt") final LocalDateTime startAt,
+            @Param("endAt") final LocalDateTime endAt
+    );
+
     interface CoreCustomerGroup {
         Gender getGender();
 
+        AgeGroup getAgeGroup();
+
+        Long getTotalCount();
+    }
+
+    interface HourlyPopulationGroup {
         AgeGroup getAgeGroup();
 
         Long getTotalCount();

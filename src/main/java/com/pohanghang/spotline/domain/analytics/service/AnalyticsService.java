@@ -1,5 +1,6 @@
 package com.pohanghang.spotline.domain.analytics.service;
 
+import com.pohanghang.spotline.domain.analytics.dto.AgeGroupDistributionDto;
 import com.pohanghang.spotline.domain.analytics.dto.CoreCustomerResponseDto;
 import com.pohanghang.spotline.domain.analytics.dto.DefaultStartAtEndAtRequestDto;
 import com.pohanghang.spotline.domain.analytics.dto.RawAnalyticsDto;
@@ -15,6 +16,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.EnumMap;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
@@ -77,5 +79,42 @@ public class AnalyticsService {
                         AGE_GROUP_LABELS.get(coreCustomerGroup.getAgeGroup())
                 ))
                 .orElseThrow(() -> new CustomException(ExceptionCode.ANALYTICS_NOT_FOUND));
+    }
+
+    @Transactional(readOnly = true)
+    public AgeGroupDistributionDto getHourlyPopulation(final DefaultStartAtEndAtRequestDto defaultStartAtEndAtRequestDto) {
+        // 1) null 검사
+        if (defaultStartAtEndAtRequestDto == null
+                || defaultStartAtEndAtRequestDto.startAt() == null
+                || defaultStartAtEndAtRequestDto.endAt() == null
+                || !defaultStartAtEndAtRequestDto.startAt().isBefore(defaultStartAtEndAtRequestDto.endAt())) {
+            throw new CustomException(ExceptionCode.INVALID_REQUEST);
+        }
+
+        final LocalDateTime startAt = defaultStartAtEndAtRequestDto.startAt();
+        final LocalDateTime endAt = defaultStartAtEndAtRequestDto.endAt();
+
+        final Map<AgeGroup, Integer> ageGroupCounts = new EnumMap<>(AgeGroup.class);
+        for (AgeGroup ageGroup : AgeGroup.values()) {
+            ageGroupCounts.put(ageGroup, 0);
+        }
+
+        final List<AnalyticsRepository.HourlyPopulationGroup> hourlyPopulationGroups =
+                analyticsRepository.findHourlyPopulationGroups(startAt, endAt);
+        for (AnalyticsRepository.HourlyPopulationGroup hourlyPopulationGroup : hourlyPopulationGroups) {
+            ageGroupCounts.put(
+                    hourlyPopulationGroup.getAgeGroup(),
+                    Math.toIntExact(hourlyPopulationGroup.getTotalCount())
+            );
+        }
+
+        return new AgeGroupDistributionDto(
+                ageGroupCounts.get(AgeGroup.CHILD),
+                ageGroupCounts.get(AgeGroup.TEN),
+                ageGroupCounts.get(AgeGroup.TWENTY),
+                ageGroupCounts.get(AgeGroup.THIRTY),
+                ageGroupCounts.get(AgeGroup.FORTY),
+                ageGroupCounts.get(AgeGroup.FIFTY_PLUS)
+        );
     }
 }

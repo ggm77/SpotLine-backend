@@ -34,8 +34,7 @@ public class AnalyticsController {
     public ResponseEntity<AgeGroupDistributionDto> getHourlyPopulation(
             @RequestBody final DefaultStartAtEndAtRequestDto defaultStartAtEndAtRequestDto) {
 
-        // mock
-        return ResponseEntity.ok(new AgeGroupDistributionDto(0, 60, 10, 10, 10, 10));
+        return ResponseEntity.ok(analyticsService.getHourlyPopulation(defaultStartAtEndAtRequestDto));
     }
 
     @PostMapping("/analytics/weather-impact")
