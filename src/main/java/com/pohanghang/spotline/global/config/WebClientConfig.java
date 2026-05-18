@@ -17,4 +17,11 @@ public class WebClientConfig {
                 .baseUrl(YOLO_URL)
                 .build();
     }
+
+    @Bean
+    public WebClient openMeteoWebClient() {
+        return WebClient.builder()
+                .baseUrl("https://api.open-meteo.com")
+                .build();
+    }
 }

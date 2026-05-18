@@ -1,9 +1,8 @@
 package com.pohanghang.spotline.domain.video.controller;
 
-import com.pohanghang.spotline.domain.video.controller.service.VideoService;
+import com.pohanghang.spotline.domain.video.service.VideoService;
 import com.pohanghang.spotline.domain.video.dto.VideoStatusResponseDto;
 import com.pohanghang.spotline.domain.video.dto.VideoUploadResponseDto;
-import com.pohanghang.spotline.domain.video.entity.Status;
 import com.pohanghang.spotline.global.exception.CustomException;
 import com.pohanghang.spotline.global.exception.constants.ExceptionCode;
 import lombok.RequiredArgsConstructor;

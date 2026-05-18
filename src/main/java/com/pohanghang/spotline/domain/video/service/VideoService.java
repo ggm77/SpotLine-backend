@@ -1,4 +1,4 @@
-package com.pohanghang.spotline.domain.video.controller.service;
+package com.pohanghang.spotline.domain.video.service;
 
 import com.pohanghang.spotline.domain.video.dto.VideoStatusResponseDto;
 import com.pohanghang.spotline.domain.video.dto.VideoUploadResponseDto;

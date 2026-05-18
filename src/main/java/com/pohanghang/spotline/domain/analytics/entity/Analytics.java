@@ -80,4 +80,16 @@ public class Analytics {
         this.temperature = temperature;
         this.rawData = rawData;
     }
+
+    public void updateVideo(final Video video) {
+        this.video = video;
+    }
+
+    public void updateWeather(Weather weather) {
+        this.weather = weather;
+    }
+
+    public void updateTemperature(final Double temperature) {
+        this.temperature = temperature;
+    }
 }

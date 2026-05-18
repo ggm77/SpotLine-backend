@@ -23,20 +23,18 @@ public class AnalyticsController {
         return ResponseEntity.ok(analyticsService.getRawAnalytics(videoId));
     }
 
-    @PostMapping("/analytics/hourly-population")
-    public ResponseEntity<AgeGroupDistributionDto> getHourlyPopulation(
-            @RequestBody final DefaultStartAtEndAtRequestDto defaultStartAtEndAtRequestDto) {
-
-        // mock
-        return ResponseEntity.ok(new AgeGroupDistributionDto(0, 60, 10, 10, 10, 10));
-    }
-
     @PostMapping("/analytics/core-customers")
     public ResponseEntity<CoreCustomerResponseDto> getCoreCustomers(
             @RequestBody final DefaultStartAtEndAtRequestDto defaultStartAtEndAtRequestDto) {
 
-        // mock
-        return ResponseEntity.ok(new CoreCustomerResponseDto("MAN", "20s"));
+        return ResponseEntity.ok(analyticsService.getCoreCustomers(defaultStartAtEndAtRequestDto));
+    }
+
+    @PostMapping("/analytics/hourly-population")
+    public ResponseEntity<AgeGroupDistributionDto> getHourlyPopulation(
+            @RequestBody final DefaultStartAtEndAtRequestDto defaultStartAtEndAtRequestDto) {
+
+        return ResponseEntity.ok(analyticsService.getHourlyPopulation(defaultStartAtEndAtRequestDto));
     }
 
     @PostMapping("/analytics/weather-impact")
@@ -44,7 +42,7 @@ public class AnalyticsController {
             @RequestBody final WeatherImpactRequestDto weatherImpactRequestDto) {
 
         // mock
-        return ResponseEntity.ok(new PerformanceResultResponseDto(85.5f, 90.0f, PerformanceResult.NORMAL));
+        return ResponseEntity.ok(analyticsService.getWeatherImpact(weatherImpactRequestDto));
     }
 
     @PostMapping("/analytics/weekday-patterns")
