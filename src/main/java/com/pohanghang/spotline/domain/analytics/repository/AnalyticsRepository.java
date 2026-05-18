@@ -3,6 +3,7 @@ package com.pohanghang.spotline.domain.analytics.repository;
 import com.pohanghang.spotline.domain.analytics.entity.Analytics;
 import com.pohanghang.spotline.domain.analytics.entity.AgeGroup;
 import com.pohanghang.spotline.domain.analytics.entity.Gender;
+import com.pohanghang.spotline.domain.analytics.entity.Weather;
 import com.pohanghang.spotline.domain.video.entity.Video;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
@@ -45,6 +46,15 @@ public interface AnalyticsRepository extends JpaRepository<Analytics, Long> {
             @Param("endAt") final LocalDateTime endAt
     );
 
+    @Query("""
+            SELECT a.startAt AS startAt,
+                   a.totalCount AS totalCount,
+                   a.weather AS weather,
+                   a.temperature AS temperature
+            FROM Analytics a
+            """)
+    List<WeatherImpactRow> findWeatherImpactRows();
+
     interface CoreCustomerGroup {
         Gender getGender();
 
@@ -57,5 +67,15 @@ public interface AnalyticsRepository extends JpaRepository<Analytics, Long> {
         AgeGroup getAgeGroup();
 
         Long getTotalCount();
+    }
+
+    interface WeatherImpactRow {
+        LocalDateTime getStartAt();
+
+        Integer getTotalCount();
+
+        Weather getWeather();
+
+        Double getTemperature();
     }
 }

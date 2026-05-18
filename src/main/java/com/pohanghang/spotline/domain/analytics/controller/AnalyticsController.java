@@ -42,7 +42,7 @@ public class AnalyticsController {
             @RequestBody final WeatherImpactRequestDto weatherImpactRequestDto) {
 
         // mock
-        return ResponseEntity.ok(new PerformanceResultResponseDto(85.5f, 90.0f, PerformanceResult.NORMAL));
+        return ResponseEntity.ok(analyticsService.getWeatherImpact(weatherImpactRequestDto));
     }
 
     @PostMapping("/analytics/weekday-patterns")

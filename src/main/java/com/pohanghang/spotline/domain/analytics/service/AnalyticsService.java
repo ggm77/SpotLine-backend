@@ -4,6 +4,7 @@ import com.pohanghang.spotline.domain.analytics.dto.*;
 import com.pohanghang.spotline.domain.analytics.entity.AgeGroup;
 import com.pohanghang.spotline.domain.analytics.entity.Analytics;
 import com.pohanghang.spotline.domain.analytics.repository.AnalyticsRepository;
+import com.pohanghang.spotline.domain.analytics.util.WeatherImpactCalculator;
 import com.pohanghang.spotline.domain.video.entity.Video;
 import com.pohanghang.spotline.domain.video.repository.VideoRepository;
 import com.pohanghang.spotline.global.exception.CustomException;
@@ -13,8 +14,8 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.util.EnumMap;
 import java.time.LocalDateTime;
+import java.util.EnumMap;
 import java.util.List;
 import java.util.Map;
 
@@ -115,7 +116,13 @@ public class AnalyticsService {
         );
     }
 
+    @Transactional(readOnly = true)
     public PerformanceResultResponseDto getWeatherImpact(final WeatherImpactRequestDto weatherImpactRequestDto) {
+        if (weatherImpactRequestDto == null || weatherImpactRequestDto.day() == null) {
+            throw new CustomException(ExceptionCode.INVALID_REQUEST);
+        }
 
+        final List<AnalyticsRepository.WeatherImpactRow> weatherImpactRows = analyticsRepository.findWeatherImpactRows();
+        return WeatherImpactCalculator.calculate(weatherImpactRequestDto, weatherImpactRows);
     }
 }
