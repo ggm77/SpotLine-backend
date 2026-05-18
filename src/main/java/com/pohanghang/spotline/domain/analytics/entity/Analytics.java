@@ -6,6 +6,7 @@ import lombok.AccessLevel;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
+import org.springframework.data.annotation.CreatedDate;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -54,6 +55,9 @@ public class Analytics {
 
     @OneToMany(mappedBy = "analytics", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<AnalyticsPerson> persons;
+
+    @CreatedDate
+    private LocalDateTime createdAt;
 
     @Builder
     public Analytics(

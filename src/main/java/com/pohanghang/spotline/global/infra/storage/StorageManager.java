@@ -1,0 +1,113 @@
+package com.pohanghang.spotline.global.infra.storage;
+
+import com.pohanghang.spotline.global.exception.CustomException;
+import com.pohanghang.spotline.global.exception.constants.ExceptionCode;
+import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.core.io.Resource;
+import org.springframework.stereotype.Component;
+import org.springframework.web.multipart.MultipartFile;
+
+import java.nio.file.Path;
+import java.time.Instant;
+import java.util.UUID;
+
+/**
+ * 파일이나 폴더의 저장, 조회, 이동, 삭제 등을 제공하는 클래스
+ * 이 클래스를 통해서 서비스 레이어에서 파일 작업을 함
+ */
+@Component
+@RequiredArgsConstructor
+public class StorageManager {
+
+    @Value("${save-path}")
+    private String SAVE_PATH;
+
+    private final StorageIoCore storageIoCore;
+
+    /**
+     * 업로드 된 파일을 임시 폴더에 저장하는 메서드
+     * @param multipartFile 업로드 된 파일
+     * @return 임시 폴더에 저장된 파일의 절대 경로
+     */
+    public Path save(final MultipartFile multipartFile) {
+        // 1) null 체크
+        if (multipartFile == null) {
+            throw new CustomException(ExceptionCode.INVALID_FILE);
+        }
+
+        // 2) 이름 추출
+        final String rawFileName = multipartFile.getOriginalFilename();
+
+        // 3) 파일명 검사
+        if (rawFileName == null || rawFileName.isBlank()) {
+            throw new CustomException(ExceptionCode.INVALID_FILE);
+        }
+
+        // 4) 파일명 재 지정
+        final String name = UUID.randomUUID() + "." + extractExtension(rawFileName);
+
+        // 5) 저장할 경로 생성
+        final Path path = toPath(SAVE_PATH, name);
+
+        // 6) 임시 폴더에 저장
+        storageIoCore.write(multipartFile, path);
+
+        return path;
+    }
+
+    /**
+     * 파일을 조회해서 Resource로 가져오는 메서드
+     * @param fileName 파일의 이름
+     * @return Resource 객체
+     */
+    public Resource getFile(final String fileName) {
+        // 1) null 검사
+        if (fileName == null || fileName.isBlank()) {
+            throw new CustomException(ExceptionCode.INVALID_FILE);
+        }
+
+        // 2) 경로로 변환
+        final Path path = toPath(SAVE_PATH, fileName);
+
+        // 3) 파일 읽어와서 리턴
+        return storageIoCore.readFileAsResource(path);
+    }
+
+    private Path toPath(
+            final String base,
+            final String fileName
+    ) {
+        // 1) null 검사
+        if (fileName == null || fileName.isBlank()) {
+            throw new CustomException(ExceptionCode.INVALID_FILE);
+        }
+
+        // 2) base랑 합쳐서 경로로
+        final Path basePath = Path.of(base).toAbsolutePath().normalize();
+        final Path path = basePath.resolve(fileName).normalize();
+
+        // 4) 경로 검사
+        if (!path.startsWith(basePath)) {
+            throw new CustomException(ExceptionCode.STORAGE_ACCESS_DENIED);
+        }
+
+        return path;
+    }
+
+    private String extractExtension(final String fileName) {
+        // 1) null 체크
+        if (fileName == null || fileName.isBlank()){
+            return "";
+        }
+
+        // 2) 확장자 존재 확인
+        final int dotIndex = fileName.lastIndexOf('.');
+        if (dotIndex == -1 || dotIndex == fileName.length() - 1){
+            return "";
+        }
+
+        return fileName.substring(dotIndex + 1);
+    }
+}
+
