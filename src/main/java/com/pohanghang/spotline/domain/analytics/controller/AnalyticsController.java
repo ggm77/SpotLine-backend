@@ -1,7 +1,7 @@
-package com.pohanghang.spotline.domain.controller;
+package com.pohanghang.spotline.domain.analytics.controller;
 
-import com.pohanghang.spotline.domain.dto.*;
-import com.pohanghang.spotline.domain.entity.PerformanceResult;
+import com.pohanghang.spotline.domain.analytics.dto.*;
+import com.pohanghang.spotline.domain.video.entity.PerformanceResult;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;

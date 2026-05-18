@@ -1,6 +1,6 @@
-package com.pohanghang.spotline.domain.dto;
+package com.pohanghang.spotline.domain.analytics.dto;
 
-import com.pohanghang.spotline.domain.entity.PerformanceResult;
+import com.pohanghang.spotline.domain.video.entity.PerformanceResult;
 
 public record PerformanceResultResponseDto(
         Float realValue,

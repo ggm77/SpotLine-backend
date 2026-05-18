@@ -1,8 +1,8 @@
-package com.pohanghang.spotline.domain.controller;
+package com.pohanghang.spotline.domain.video.controller;
 
-import com.pohanghang.spotline.domain.dto.VideoStatusResponseDto;
-import com.pohanghang.spotline.domain.dto.VideoUploadResponseDto;
-import com.pohanghang.spotline.domain.entity.Status;
+import com.pohanghang.spotline.domain.video.dto.VideoStatusResponseDto;
+import com.pohanghang.spotline.domain.video.dto.VideoUploadResponseDto;
+import com.pohanghang.spotline.domain.analytics.entity.Status;
 import lombok.RequiredArgsConstructor;
 import org.springframework.core.io.ByteArrayResource;
 import org.springframework.core.io.Resource;

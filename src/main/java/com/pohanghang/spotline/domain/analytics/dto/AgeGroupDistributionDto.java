@@ -1,4 +1,4 @@
-package com.pohanghang.spotline.domain.dto;
+package com.pohanghang.spotline.domain.analytics.dto;
 
 public record AgeGroupDistributionDto(
         Integer age00s,

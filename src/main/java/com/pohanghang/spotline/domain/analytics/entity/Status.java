@@ -1,4 +1,4 @@
-package com.pohanghang.spotline.domain.entity;
+package com.pohanghang.spotline.domain.analytics.entity;
 
 public enum Status {
     PROCESSING,
