@@ -8,6 +8,7 @@ import com.pohanghang.spotline.global.exception.constants.ExceptionCode;
 import com.pohanghang.spotline.global.infra.storage.StorageManager;
 import com.pohanghang.spotline.global.infra.storage.VideoAnalyzer;
 import lombok.RequiredArgsConstructor;
+import org.springframework.core.io.Resource;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -53,5 +54,19 @@ public class VideoService {
         return new VideoUploadResponseDto(
                 videoRepository.save(video).getId()
         );
+    }
+
+    public Resource downloadVideo(final Long id) {
+        // 1) null 검사
+        if (id == null) {
+            throw new CustomException(ExceptionCode.INVALID_REQUEST);
+        }
+
+        // 2) 영상 조회
+        final Video video = videoRepository.findById(id)
+                .orElseThrow(() -> new CustomException(ExceptionCode.VIDEO_NOT_FOUND));
+
+        // 3) 파일 리소스 가져오기
+        return storageManager.getFile(video.getName());
     }
 }

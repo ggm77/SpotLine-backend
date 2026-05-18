@@ -4,6 +4,8 @@ import com.pohanghang.spotline.domain.video.controller.service.VideoService;
 import com.pohanghang.spotline.domain.video.dto.VideoStatusResponseDto;
 import com.pohanghang.spotline.domain.video.dto.VideoUploadResponseDto;
 import com.pohanghang.spotline.domain.analytics.entity.Status;
+import com.pohanghang.spotline.global.exception.CustomException;
+import com.pohanghang.spotline.global.exception.constants.ExceptionCode;
 import lombok.RequiredArgsConstructor;
 import org.springframework.core.io.ByteArrayResource;
 import org.springframework.core.io.Resource;
@@ -13,6 +15,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
+import java.io.IOException;
 import java.time.LocalDateTime;
 
 @RequiredArgsConstructor
@@ -37,15 +40,17 @@ public class VideoController {
             @PathVariable final Long id
     ) {
 
-        //mock
-        byte[] mockData = "mock video binary data".getBytes();
-        Resource resource = new ByteArrayResource(mockData);
+        final Resource resource = videoService.downloadVideo(id);
 
-        return ResponseEntity.ok()
-                .contentType(MediaType.APPLICATION_OCTET_STREAM)
-                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"video.mp4\"")
-                .contentLength(mockData.length)
-                .body(resource);
+        try {
+            return ResponseEntity.ok()
+                    .contentType(MediaType.APPLICATION_OCTET_STREAM)
+                    .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + resource.getFilename() + "\"")
+                    .contentLength(resource.contentLength())
+                    .body(resource);
+        } catch (IOException e) {
+            throw new CustomException(ExceptionCode.VIDEO_NOT_FOUND);
+        }
     }
 
     @GetMapping("/video/{id}/status")
