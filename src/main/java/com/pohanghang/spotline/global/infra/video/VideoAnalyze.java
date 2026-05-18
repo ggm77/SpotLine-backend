@@ -9,6 +9,7 @@ import com.pohanghang.spotline.domain.video.repository.VideoRepository;
 import com.pohanghang.spotline.global.config.FfmpegConfig;
 import com.pohanghang.spotline.global.exception.CustomException;
 import com.pohanghang.spotline.global.exception.constants.ExceptionCode;
+import com.pohanghang.spotline.global.infra.openmeteo.OpenMeteoClient;
 import com.pohanghang.spotline.global.infra.storage.StorageManager;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -38,6 +39,7 @@ public class VideoAnalyze {
     private final YoloClient yoloClient;
     private final AnalyticsRepository analyticsRepository;
     private final VideoRepository videoRepository;
+    private final OpenMeteoClient openMeteoClient;
 
     @Value("${video.analyze-chunk-size}")
     private int CHUNK_SIZE;
@@ -55,6 +57,7 @@ public class VideoAnalyze {
         int chunkIndex = 0;
 
         final Path outputDir = path.getParent();
+        final OpenMeteoClient.WeatherData weatherData = openMeteoClient.getSeoulWeatherData(startAt);
 
         while (startTime < durationSec) {
             final String chunkFileName = "chunk_"+UUID.randomUUID().toString().substring(0,8)+"_"+chunkIndex+".mp4";
@@ -78,6 +81,8 @@ public class VideoAnalyze {
                 // 분석 결과 파싱해서 DB 저장
                 final Analytics analytics = RawAnalysisConverter.toEntity(rawAnalyticsDto, chunkStartAt, chunkEndAt);
                 analytics.updateVideo(video);
+                analytics.updateWeather(weatherData.weather());
+                analytics.updateTemperature(weatherData.temperature());
                 analyticsRepository.save(analytics);
 
             } catch (Exception ex) {

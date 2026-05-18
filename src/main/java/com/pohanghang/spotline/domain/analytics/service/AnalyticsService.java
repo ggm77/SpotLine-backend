@@ -1,9 +1,6 @@
 package com.pohanghang.spotline.domain.analytics.service;
 
-import com.pohanghang.spotline.domain.analytics.dto.AgeGroupDistributionDto;
-import com.pohanghang.spotline.domain.analytics.dto.CoreCustomerResponseDto;
-import com.pohanghang.spotline.domain.analytics.dto.DefaultStartAtEndAtRequestDto;
-import com.pohanghang.spotline.domain.analytics.dto.RawAnalyticsDto;
+import com.pohanghang.spotline.domain.analytics.dto.*;
 import com.pohanghang.spotline.domain.analytics.entity.AgeGroup;
 import com.pohanghang.spotline.domain.analytics.entity.Analytics;
 import com.pohanghang.spotline.domain.analytics.repository.AnalyticsRepository;
@@ -116,5 +113,9 @@ public class AnalyticsService {
                 ageGroupCounts.get(AgeGroup.FORTY),
                 ageGroupCounts.get(AgeGroup.FIFTY_PLUS)
         );
+    }
+
+    public PerformanceResultResponseDto getWeatherImpact(final WeatherImpactRequestDto weatherImpactRequestDto) {
+
     }
 }
