@@ -8,7 +8,8 @@ import com.pohanghang.spotline.domain.video.repository.VideoRepository;
 import com.pohanghang.spotline.global.exception.CustomException;
 import com.pohanghang.spotline.global.exception.constants.ExceptionCode;
 import com.pohanghang.spotline.global.infra.storage.StorageManager;
-import com.pohanghang.spotline.global.infra.storage.VideoAnalyzer;
+import com.pohanghang.spotline.global.infra.storage.VideoValidator;
+import com.pohanghang.spotline.global.infra.video.VideoAnalyze;
 import lombok.RequiredArgsConstructor;
 import org.springframework.core.io.Resource;
 import org.springframework.stereotype.Service;
@@ -23,6 +24,7 @@ public class VideoService {
 
     private final VideoRepository videoRepository;
     private final StorageManager storageManager;
+    private final VideoAnalyze videoAnalyze;
 
     public VideoUploadResponseDto uploadVideo(
             final MultipartFile multipartFile,
@@ -41,7 +43,7 @@ public class VideoService {
         final Path path = storageManager.save(multipartFile);
 
         // 3) 정상 mp4인지 검사
-        if (!VideoAnalyzer.isValidMp4(path)){
+        if (!VideoValidator.isValidMp4(path)){
             throw new CustomException(ExceptionCode.INVALID_FILE);
         }
 
@@ -54,11 +56,12 @@ public class VideoService {
                 .build();
 
         // 5) DB 저장
-        return new VideoUploadResponseDto(
-                videoRepository.save(video).getId()
-        );
+        final Video savedVideo = videoRepository.save(video);
 
         // 6) 비디오 분석 시작
+        videoAnalyze.analyze(video, startAt, endAt);
+
+        return new VideoUploadResponseDto(savedVideo.getId());
     }
 
     public Resource downloadVideo(final Long id) {

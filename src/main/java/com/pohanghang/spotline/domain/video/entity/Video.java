@@ -9,6 +9,7 @@ import lombok.NoArgsConstructor;
 import org.springframework.data.annotation.CreatedDate;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.List;
 
 @Entity
@@ -20,7 +21,7 @@ public class Video {
     private Long id;
 
     @OneToMany(mappedBy = "video", cascade = CascadeType.ALL, orphanRemoval = true)
-    private List<Analytics> analytics;
+    private List<Analytics> analytics = new ArrayList<>();
 
     @Column(length = 255, nullable = false)
     private String name;
@@ -47,6 +48,10 @@ public class Video {
         this.name = name;
         this.startAt = startAt;
         this.endAt = endAt;
+        this.status = status;
+    }
+
+    public void updateStatus(final Status status) {
         this.status = status;
     }
 }

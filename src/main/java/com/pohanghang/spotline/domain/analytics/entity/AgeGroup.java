@@ -6,5 +6,6 @@ public enum AgeGroup {
     TWENTY,
     THIRTY,
     FORTY,
-    FIFTY_PLUS
+    FIFTY_PLUS,
+    UNKNOWN;
 }

@@ -9,6 +9,7 @@ import lombok.NoArgsConstructor;
 import org.springframework.data.annotation.CreatedDate;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.List;
 
 @Entity
@@ -43,10 +44,8 @@ public class Analytics {
     private Integer totalCount;
 
     @Enumerated(EnumType.STRING)
-    @Column(nullable = false)
     private Weather weather;
 
-    @Column(nullable = false)
     private Double temperature;
 
     @Lob
@@ -54,7 +53,7 @@ public class Analytics {
     private String rawData; // 영상에서 추출한 원본 데이터 그대로
 
     @OneToMany(mappedBy = "analytics", cascade = CascadeType.ALL, orphanRemoval = true)
-    private List<AnalyticsPerson> persons;
+    private List<AnalyticsPerson> persons = new ArrayList<>();
 
     @CreatedDate
     private LocalDateTime createdAt;

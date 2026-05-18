@@ -7,7 +7,7 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Path;
 import java.util.Set;
 
-public class VideoAnalyzer {
+public class VideoValidator {
 
     private static final Set<String> MP4_BRANDS = Set.of(
             "mp41", "mp42", "isom", "iso2", "avc1", "dash", "mmp4", "MSNV", "NDSC", "NDSH"

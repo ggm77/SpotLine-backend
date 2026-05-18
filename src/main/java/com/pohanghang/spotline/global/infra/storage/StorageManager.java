@@ -8,6 +8,7 @@ import org.springframework.core.io.Resource;
 import org.springframework.stereotype.Component;
 import org.springframework.web.multipart.MultipartFile;
 
+import java.io.File;
 import java.nio.file.Path;
 import java.time.Instant;
 import java.util.UUID;
@@ -72,6 +73,14 @@ public class StorageManager {
 
         // 3) 파일 읽어와서 리턴
         return storageIoCore.readFileAsResource(path);
+    }
+
+    public Path getPath(final String fileName) {
+        if (fileName == null || fileName.isBlank()) {
+            throw new CustomException(ExceptionCode.INVALID_FILE);
+        }
+
+        return toPath(SAVE_PATH, fileName);
     }
 
     private Path toPath(
