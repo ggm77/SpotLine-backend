@@ -5,6 +5,7 @@ import com.pohanghang.spotline.domain.analytics.entity.AgeGroup;
 import com.pohanghang.spotline.domain.analytics.entity.Analytics;
 import com.pohanghang.spotline.domain.analytics.repository.AnalyticsRepository;
 import com.pohanghang.spotline.domain.analytics.util.WeatherImpactCalculator;
+import com.pohanghang.spotline.domain.analytics.util.WeekdayPatternCalculator;
 import com.pohanghang.spotline.domain.video.entity.Video;
 import com.pohanghang.spotline.domain.video.repository.VideoRepository;
 import com.pohanghang.spotline.global.exception.CustomException;
@@ -124,5 +125,15 @@ public class AnalyticsService {
 
         final List<AnalyticsRepository.WeatherImpactRow> weatherImpactRows = analyticsRepository.findWeatherImpactRows();
         return WeatherImpactCalculator.calculate(weatherImpactRequestDto, weatherImpactRows);
+    }
+    
+    @Transactional(readOnly = true)
+    public PerformanceResultResponseDto getWeekdayPatterns(final WeekdayPatternRequestDto weekdayPatternRequestDto) {
+        if (weekdayPatternRequestDto == null || weekdayPatternRequestDto.day() == null) {
+            throw new CustomException(ExceptionCode.INVALID_REQUEST);
+        }
+
+        final List<AnalyticsRepository.WeatherImpactRow> rows = analyticsRepository.findWeatherImpactRows();
+        return WeekdayPatternCalculator.calculate(weekdayPatternRequestDto, rows);
     }
 }

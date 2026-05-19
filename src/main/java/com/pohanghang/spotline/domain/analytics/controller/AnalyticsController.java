@@ -41,7 +41,6 @@ public class AnalyticsController {
     public ResponseEntity<PerformanceResultResponseDto> getWeatherImpact(
             @RequestBody final WeatherImpactRequestDto weatherImpactRequestDto) {
 
-        // mock
         return ResponseEntity.ok(analyticsService.getWeatherImpact(weatherImpactRequestDto));
     }
 
