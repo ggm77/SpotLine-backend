@@ -11,6 +11,9 @@ public class WebClientConfig {
     @Value("${yolo.url}")
     private String YOLO_URL;
 
+    @Value("${gemini.url}")
+    private String GEMINI_URL;
+
     @Bean
     public WebClient yoloWebClient() {
         return WebClient.builder()
@@ -22,6 +25,13 @@ public class WebClientConfig {
     public WebClient openMeteoWebClient() {
         return WebClient.builder()
                 .baseUrl("https://api.open-meteo.com")
+                .build();
+    }
+
+    @Bean
+    public WebClient geminiWebClient() {
+        return WebClient.builder()
+                .baseUrl(GEMINI_URL)
                 .build();
     }
 }

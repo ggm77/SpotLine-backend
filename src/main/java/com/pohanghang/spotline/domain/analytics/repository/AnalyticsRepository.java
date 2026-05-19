@@ -78,4 +78,6 @@ public interface AnalyticsRepository extends JpaRepository<Analytics, Long> {
 
         Double getTemperature();
     }
+
+    List<Analytics> findByStartAtBetween(LocalDateTime start, LocalDateTime end);
 }
