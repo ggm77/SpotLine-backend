@@ -50,7 +50,7 @@ public class AnalyticsController {
             @RequestBody final WeekdayPatternRequestDto weekdayPatternRequestDto) {
 
         // mock
-        return ResponseEntity.ok(new PerformanceResultResponseDto(72.3f, 80.0f, PerformanceResult.BAD));
+        return ResponseEntity.ok(new PerformanceResultResponseDto(72.3f, 80.0f, 75.0f, PerformanceResult.BAD));
     }
 
     @PostMapping("/analytics/visits/count")

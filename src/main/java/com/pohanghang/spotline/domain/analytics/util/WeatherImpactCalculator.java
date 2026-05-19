@@ -41,24 +41,33 @@ public final class WeatherImpactCalculator {
 
         final List<WeatherImpactObservation> observations = toWeatherImpactObservations(
                 dailyWeatherVisits,
-                targetDate,
-                weatherImpactRequestDto
+                targetDate
         );
         if (observations.isEmpty()) {
             throw new CustomException(ExceptionCode.ANALYTICS_NOT_FOUND);
         }
 
-        final double targetRain = resolveRainValue(targetDailyWeatherVisit, weatherImpactRequestDto);
-        final double targetTemperature = resolveTemperature(targetDailyWeatherVisit, weatherImpactRequestDto);
+        final double targetRain = resolveRainValue(targetDailyWeatherVisit);
+        final double targetTemperature = resolveTemperature(targetDailyWeatherVisit);
         final double[] coefficients = estimateWeatherImpactCoefficients(observations);
-        final double expectedValue = normalizeExpectedValue(
-                predict(coefficients, targetRain, targetTemperature, targetDate.getDayOfWeek())
-        );
+        
+        final double rawExpectedValue = predict(coefficients, targetRain, targetTemperature, targetDate.getDayOfWeek());
+        final double expectedValue = normalizeExpectedValue(rawExpectedValue);
         final double realValue = targetDailyWeatherVisit.totalCount();
+
+        double totalSum = 0.0;
+        for (WeatherImpactObservation obs : observations) {
+            totalSum += obs.totalCount();
+        }
+        final double averageCount = totalSum / observations.size();
+
+        // 기댓값(rawExpectedValue) 전체를 빼주어야 잔차(오차)가 중심 0이 되고, 거기에 평균을 더해야 스케일이 유지됩니다.
+        final double adjustedValue = Math.max(0.0, realValue - rawExpectedValue + averageCount);
 
         return new PerformanceResultResponseDto(
                 (float) realValue,
                 (float) expectedValue,
+                (float) adjustedValue,
                 toPerformanceResult(realValue / expectedValue)
         );
     }
@@ -86,20 +95,12 @@ public final class WeatherImpactCalculator {
 
     private static List<WeatherImpactObservation> toWeatherImpactObservations(
             final Map<LocalDate, DailyWeatherVisit> dailyWeatherVisits,
-            final LocalDate targetDate,
-            final WeatherImpactRequestDto weatherImpactRequestDto
+            final LocalDate targetDate
     ) {
         final List<WeatherImpactObservation> observations = new ArrayList<>();
         for (DailyWeatherVisit dailyWeatherVisit : dailyWeatherVisits.values()) {
             Double temperature = dailyWeatherVisit.averageTemperature();
-            if (temperature == null && dailyWeatherVisit.date().equals(targetDate) && weatherImpactRequestDto.temp() != null) {
-                temperature = weatherImpactRequestDto.temp().doubleValue();
-            }
-
             Integer rain = dailyWeatherVisit.rain();
-            if (rain == null && dailyWeatherVisit.date().equals(targetDate) && weatherImpactRequestDto.rain() != null) {
-                rain = toRainValue(weatherImpactRequestDto.rain());
-            }
 
             if (temperature == null || rain == null) {
                 continue;
@@ -117,15 +118,10 @@ public final class WeatherImpactCalculator {
     }
 
     private static double resolveRainValue(
-            final DailyWeatherVisit targetDailyWeatherVisit,
-            final WeatherImpactRequestDto weatherImpactRequestDto
+            final DailyWeatherVisit targetDailyWeatherVisit
     ) {
         if (targetDailyWeatherVisit.rain() != null) {
             return targetDailyWeatherVisit.rain();
-        }
-
-        if (weatherImpactRequestDto.rain() != null) {
-            return toRainValue(weatherImpactRequestDto.rain());
         }
 
         throw new CustomException(ExceptionCode.ANALYTICS_NOT_FOUND);
@@ -140,16 +136,11 @@ public final class WeatherImpactCalculator {
     }
 
     private static double resolveTemperature(
-            final DailyWeatherVisit targetDailyWeatherVisit,
-            final WeatherImpactRequestDto weatherImpactRequestDto
+            final DailyWeatherVisit targetDailyWeatherVisit
     ) {
         final Double averageTemperature = targetDailyWeatherVisit.averageTemperature();
         if (averageTemperature != null) {
             return averageTemperature;
-        }
-
-        if (weatherImpactRequestDto.temp() != null) {
-            return weatherImpactRequestDto.temp();
         }
 
         throw new CustomException(ExceptionCode.ANALYTICS_NOT_FOUND);
