@@ -5,6 +5,7 @@ import com.pohanghang.spotline.domain.video.entity.PerformanceResult;
 public record PerformanceResultResponseDto(
         Float realValue,
         Float expectValue,
+        Float adjustedValue,
         PerformanceResult result
 ) {
 }
