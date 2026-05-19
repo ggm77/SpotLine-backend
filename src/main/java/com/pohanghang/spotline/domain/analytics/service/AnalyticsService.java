@@ -319,4 +319,118 @@ public class AnalyticsService {
         String responseMessage = geminiClient.generateContent(prompt);
         return new MessageResponseDto(responseMessage);
     }
+
+    @Transactional(readOnly = true)
+    public MessageResponseDto getMarketingRecommendations() {
+        LocalDateTime now = LocalDateTime.now(ZoneId.of("Asia/Seoul"));
+        List<AnalyticsRepository.WeatherImpactRow> rows = analyticsRepository.findWeatherImpactRows();
+
+        StringBuilder triggers = new StringBuilder();
+
+        // [Rule 1] 특정 인구통계 감소
+        LocalDateTime week0 = now.minusDays(21);
+        LocalDateTime week1 = now.minusDays(42);
+        List<AnalyticsRepository.CoreCustomerGroup> recent3W = analyticsRepository.findCoreCustomerGroups(week0, now);
+        List<AnalyticsRepository.CoreCustomerGroup> prev3W = analyticsRepository.findCoreCustomerGroups(week1, week0);
+
+        if (!recent3W.isEmpty() && !prev3W.isEmpty()) {
+            AnalyticsRepository.CoreCustomerGroup topRecent = recent3W.get(0);
+            long totalRecent = recent3W.stream().mapToLong(AnalyticsRepository.CoreCustomerGroup::getTotalCount).sum();
+            double recentRatio = (double) topRecent.getTotalCount() / totalRecent;
+
+            long totalPrev = prev3W.stream().mapToLong(AnalyticsRepository.CoreCustomerGroup::getTotalCount).sum();
+            double prevRatio = 0;
+            for (AnalyticsRepository.CoreCustomerGroup g : prev3W) {
+                if (g.getAgeGroup() == topRecent.getAgeGroup() && g.getGender() == topRecent.getGender()) {
+                    prevRatio = (double) g.getTotalCount() / totalPrev;
+                    break;
+                }
+            }
+
+            if (prevRatio - recentRatio > 0.05) {
+                String genderStr = "MALE".equals(topRecent.getGender().name()) ? "남성" : ("FEMALE".equals(topRecent.getGender().name()) ? "여성" : "성별미상");
+                String ageStr = AGE_GROUP_LABELS.getOrDefault(topRecent.getAgeGroup(), "알수없음");
+                triggers.append(String.format("- %s %s 방문 3주 연속 감소 (-%d%%p). 개선을 위한 마케팅 제안 1줄\n", ageStr, genderStr, (int)((prevRatio - recentRatio) * 100)));
+            }
+        }
+
+        // [Rule 2] 만성 한산 시간대
+        LocalDateTime fourWeeksAgo = now.minusDays(28);
+        java.util.Map<String, Integer> timeSlotCounts = new java.util.HashMap<>();
+        int totalVisits4W = 0;
+        for (AnalyticsRepository.WeatherImpactRow row : rows) {
+            if (row.getStartAt() == null || row.getStartAt().isBefore(fourWeeksAgo) || row.getTotalCount() == null) continue;
+            java.time.DayOfWeek dow = row.getStartAt().getDayOfWeek();
+            int hour = row.getStartAt().getHour();
+            String dowStr = switch (dow) {
+                case MONDAY -> "월요일";
+                case TUESDAY -> "화요일";
+                case WEDNESDAY -> "수요일";
+                case THURSDAY -> "목요일";
+                case FRIDAY -> "금요일";
+                case SATURDAY -> "토요일";
+                case SUNDAY -> "일요일";
+            };
+            if (hour >= 14 && hour < 17) {
+                String key = dowStr + " 오후 2~5시";
+                timeSlotCounts.put(key, timeSlotCounts.getOrDefault(key, 0) + row.getTotalCount());
+            }
+            totalVisits4W += row.getTotalCount();
+        }
+        
+        if (!timeSlotCounts.isEmpty()) {
+            double avgPerSlot = (double) totalVisits4W / (7 * 3);
+            for (java.util.Map.Entry<String, Integer> entry : timeSlotCounts.entrySet()) {
+                if (entry.getValue() < avgPerSlot * 0.5) {
+                    triggers.append(String.format("- %s 방문이 평균의 %d%%. 해당 시간대 매출 개선 제안 1줄\n", entry.getKey(), (int)(entry.getValue() / avgPerSlot * 100)));
+                    break;
+                }
+            }
+        }
+
+        // [Rule 3] 데드크로스 감지
+        try {
+            VisitCountResponseDto trend = VisitTrendCalculator.calculateTrend(now.minusDays(60), now, rows);
+            List<Integer> ma5List = trend.data().get(2);
+            List<Integer> ma20List = trend.data().get(4);
+            if (ma5List.size() >= 2 && ma20List.size() >= 2) {
+                int lastIdx = ma5List.size() - 1;
+                Integer currMa5 = ma5List.get(lastIdx);
+                Integer currMa20 = ma20List.get(lastIdx);
+                Integer prevMa5 = ma5List.get(lastIdx - 1);
+                Integer prevMa20 = ma20List.get(lastIdx - 1);
+                if (currMa5 != null && currMa20 != null && prevMa5 != null && prevMa20 != null) {
+                    if (currMa5 < currMa20 && prevMa5 >= prevMa20) {
+                        triggers.append("- 순수 방문 추세 하락 전환. 사장님에게 주의 환기 + 행동 제안 1줄\n");
+                    }
+                }
+            }
+        } catch (Exception e) {
+            // ignore
+        }
+
+        // [Rule 4] 고날씨 민감도 + 우천 예보
+        try {
+            OpenMeteoClient.WeatherData tomorrowWeather = openMeteoClient.getSeoulWeatherData(now.plusDays(1).withHour(14).withMinute(0).withSecond(0).withNano(0));
+            if (tomorrowWeather.weather() == Weather.RAINY || tomorrowWeather.weather() == Weather.SNOW) {
+                PerformanceResultResponseDto impact = WeatherImpactCalculator.calculate(new WeatherImpactRequestDto(now.minusDays(1).toLocalDate().atStartOfDay()), rows);
+                if (impact.adjustedValue() > 0 && impact.expectValue() > 0 && impact.realValue() / impact.expectValue() < 0.75) {
+                    triggers.append("- 우리 매장 날씨 민감도 높음. 내일 비 예보. 우천 대응 마케팅 1줄 제안\n");
+                }
+            }
+        } catch (Exception e) {
+            // ignore
+        }
+
+        if (triggers.length() == 0) {
+            triggers.append("- 현재 특별한 하락세나 이상 신호가 없습니다. 꾸준한 성장을 위한 일반적인 마케팅 아이디어 1줄 제안해줘.\n");
+        }
+
+        String prompt = "다음 상황(트리거)들을 분석하여 사장님을 위한 마케팅/운영 제안을 작성해줘.\n" +
+                "각 제안은 💡 기호로 시작하고, 상황 설명 후 행동 제안을 2~3줄로 해줘. 구분선(──────────────────────)을 사용해서 여러 제안을 분리해줘.\n\n" +
+                "상황:\n" + triggers.toString();
+
+        String responseMessage = geminiClient.generateContent(prompt);
+        return new MessageResponseDto(responseMessage);
+    }
 }

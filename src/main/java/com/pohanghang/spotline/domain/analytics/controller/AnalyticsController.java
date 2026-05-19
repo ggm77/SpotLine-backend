@@ -75,9 +75,6 @@ public class AnalyticsController {
 
     @PostMapping("/analytics/marketing-recommendations")
     public ResponseEntity<MessageResponseDto> getMarketingRecommendations() {
-
-        // mock
-        return ResponseEntity.ok(new MessageResponseDto(
-                "20대 여성 고객 비율이 높으므로, SNS 기반 프로모션과 인스타그램 이벤트를 추천드립니다. 오후 2~4시 피크 타임에 맞춘 타임 세일도 효과적일 것으로 보입니다."));
+        return ResponseEntity.ok(analyticsService.getMarketingRecommendations());
     }
 }
