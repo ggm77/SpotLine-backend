@@ -13,11 +13,10 @@ public class PredictionTomorrowCalculator {
 
     public static PredictionTomorrowResponseDto calculate(
             final List<AnalyticsRepository.WeatherImpactRow> rows,
-            final Weather tomorrowWeather
+            final Weather tomorrowWeather,
+            final LocalDate targetDate
     ) {
-        LocalDate today = LocalDate.now();
-        LocalDate tomorrow = today.plusDays(1);
-        DayOfWeek targetDayOfWeek = tomorrow.getDayOfWeek();
+        DayOfWeek targetDayOfWeek = targetDate.getDayOfWeek();
 
         // 1. Group data by Date
         Map<LocalDate, DailyStats> dailyData = new HashMap<>();
@@ -39,7 +38,7 @@ public class PredictionTomorrowCalculator {
         // Find recent 4 occurrences of targetDayOfWeek before tomorrow
         for (int i = sortedDates.size() - 1; i >= 0; i--) {
             LocalDate d = sortedDates.get(i);
-            if (d.getDayOfWeek() == targetDayOfWeek && d.isBefore(tomorrow)) {
+            if (d.getDayOfWeek() == targetDayOfWeek && d.isBefore(targetDate)) {
                 sameDayVisits.add(dailyData.get(d).totalVisits);
                 if (count4Weeks < 4) {
                     sum4Weeks += dailyData.get(d).totalVisits;

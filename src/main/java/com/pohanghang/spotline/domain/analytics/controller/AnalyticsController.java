@@ -65,10 +65,7 @@ public class AnalyticsController {
 
     @PostMapping("/analytics/predictions/next-week")
     public ResponseEntity<PredictionNextWeekResponseDto> getPredictionNextWeek() {
-
-        // mock
-        return ResponseEntity.ok(new PredictionNextWeekResponseDto(
-                Arrays.asList(120, 135, 150, 140, 160, 200, 180)));
+        return ResponseEntity.ok(analyticsService.getPredictionNextWeek());
     }
 
     @PostMapping("/analytics/daily-briefing")

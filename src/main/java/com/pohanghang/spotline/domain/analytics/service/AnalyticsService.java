@@ -174,6 +174,32 @@ public class AnalyticsService {
         OpenMeteoClient.WeatherData weatherData = openMeteoClient.getSeoulWeatherData(tomorrowAfternoon);
         Weather tomorrowWeather = weatherData.weather();
 
-        return PredictionTomorrowCalculator.calculate(rows, tomorrowWeather);
+        return PredictionTomorrowCalculator.calculate(rows, tomorrowWeather, tomorrowAfternoon.toLocalDate());
+    }
+
+    @Transactional(readOnly = true)
+    public PredictionNextWeekResponseDto getPredictionNextWeek() {
+        final List<AnalyticsRepository.WeatherImpactRow> rows = analyticsRepository.findWeatherImpactRows();
+        List<PredictionTomorrowResponseDto> nextWeekPredictions = new java.util.ArrayList<>();
+
+        LocalDateTime now = LocalDateTime.now(ZoneId.of("Asia/Seoul"));
+        
+        for (int i = 1; i <= 7; i++) {
+            LocalDateTime targetAfternoon = now.plusDays(i)
+                    .withHour(14)
+                    .withMinute(0)
+                    .withSecond(0)
+                    .withNano(0);
+
+            OpenMeteoClient.WeatherData weatherData = openMeteoClient.getSeoulWeatherData(targetAfternoon);
+            Weather targetWeather = weatherData.weather();
+
+            PredictionTomorrowResponseDto prediction = PredictionTomorrowCalculator.calculate(
+                    rows, targetWeather, targetAfternoon.toLocalDate()
+            );
+            nextWeekPredictions.add(prediction);
+        }
+
+        return new PredictionNextWeekResponseDto(nextWeekPredictions);
     }
 }
