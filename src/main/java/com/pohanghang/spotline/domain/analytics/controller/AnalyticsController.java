@@ -55,21 +55,12 @@ public class AnalyticsController {
     public ResponseEntity<VisitCountResponseDto> getVisitCount(
             @RequestBody final DefaultStartAtEndAtRequestDto defaultStartAtEndAtRequestDto) {
 
-        // mock
-        return ResponseEntity.ok(new VisitCountResponseDto(
-                Arrays.asList("2026-05-17T15:00:00", "2026-05-17T16:00:00", "2026-05-17T17:00:00"),
-                Arrays.asList(
-                        Arrays.asList(10, 15, 20),
-                        Arrays.asList(12, 18, 25),
-                        Arrays.asList(8, 14, 22),
-                        Arrays.asList(11, 16, 21))));
+        return ResponseEntity.ok(analyticsService.getVisitCount(defaultStartAtEndAtRequestDto));
     }
 
     @PostMapping("/analytics/predictions/tomorrow")
     public ResponseEntity<PredictionTomorrowResponseDto> getPredictionTomorrow() {
-
-        // mock
-        return ResponseEntity.ok(new PredictionTomorrowResponseDto(142));
+        return ResponseEntity.ok(analyticsService.getPredictionTomorrow());
     }
 
     @PostMapping("/analytics/predictions/next-week")

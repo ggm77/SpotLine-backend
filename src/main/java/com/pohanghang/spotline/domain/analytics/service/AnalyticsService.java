@@ -6,6 +6,10 @@ import com.pohanghang.spotline.domain.analytics.entity.Analytics;
 import com.pohanghang.spotline.domain.analytics.repository.AnalyticsRepository;
 import com.pohanghang.spotline.domain.analytics.util.WeatherImpactCalculator;
 import com.pohanghang.spotline.domain.analytics.util.WeekdayPatternCalculator;
+import com.pohanghang.spotline.domain.analytics.util.VisitTrendCalculator;
+import com.pohanghang.spotline.domain.analytics.util.PredictionTomorrowCalculator;
+import com.pohanghang.spotline.domain.analytics.entity.Weather;
+import com.pohanghang.spotline.global.infra.openmeteo.OpenMeteoClient;
 import com.pohanghang.spotline.domain.video.entity.Video;
 import com.pohanghang.spotline.domain.video.repository.VideoRepository;
 import com.pohanghang.spotline.global.exception.CustomException;
@@ -16,6 +20,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
+import java.time.ZoneId;
 import java.util.EnumMap;
 import java.util.List;
 import java.util.Map;
@@ -36,6 +41,7 @@ public class AnalyticsService {
 
     private final AnalyticsRepository analyticsRepository;
     private final VideoRepository videoRepository;
+    private final OpenMeteoClient openMeteoClient;
 
     public RawAnalyticsDto getRawAnalytics(final Long videoId) {
         // 1) null 검사
@@ -135,5 +141,39 @@ public class AnalyticsService {
 
         final List<AnalyticsRepository.WeatherImpactRow> rows = analyticsRepository.findWeatherImpactRows();
         return WeekdayPatternCalculator.calculate(weekdayPatternRequestDto, rows);
+    }
+
+    @Transactional(readOnly = true)
+    public VisitCountResponseDto getVisitCount(final DefaultStartAtEndAtRequestDto defaultStartAtEndAtRequestDto) {
+        if (defaultStartAtEndAtRequestDto == null
+                || defaultStartAtEndAtRequestDto.startAt() == null
+                || defaultStartAtEndAtRequestDto.endAt() == null
+                || !defaultStartAtEndAtRequestDto.startAt().isBefore(defaultStartAtEndAtRequestDto.endAt())) {
+            throw new CustomException(ExceptionCode.INVALID_REQUEST);
+        }
+
+        final List<AnalyticsRepository.WeatherImpactRow> rows = analyticsRepository.findWeatherImpactRows();
+        return VisitTrendCalculator.calculateTrend(
+                defaultStartAtEndAtRequestDto.startAt(),
+                defaultStartAtEndAtRequestDto.endAt(),
+                rows
+        );
+    }
+
+    @Transactional(readOnly = true)
+    public PredictionTomorrowResponseDto getPredictionTomorrow() {
+        final List<AnalyticsRepository.WeatherImpactRow> rows = analyticsRepository.findWeatherImpactRows();
+
+        LocalDateTime tomorrowAfternoon = LocalDateTime.now(ZoneId.of("Asia/Seoul"))
+                .plusDays(1)
+                .withHour(14)
+                .withMinute(0)
+                .withSecond(0)
+                .withNano(0);
+
+        OpenMeteoClient.WeatherData weatherData = openMeteoClient.getSeoulWeatherData(tomorrowAfternoon);
+        Weather tomorrowWeather = weatherData.weather();
+
+        return PredictionTomorrowCalculator.calculate(rows, tomorrowWeather);
     }
 }
