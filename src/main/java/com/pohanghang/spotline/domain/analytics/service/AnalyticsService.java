@@ -308,7 +308,7 @@ public class AnalyticsService {
                 "평균 체류 %d분 (평소%s분).\n" +
                 "날씨 %s, 보정 후 %s.\n" +
                 "오늘 예측 %d명, 오후 %s 예보.\n" +
-                "위 내용을 일일 브리핑 형식으로 변환해줘.",
+                "위 내용을 일일 브리핑 형식으로 변환해줘. 날짜 정보는 포함하지마.",
                 yesterdayVisits, diffSign, diffPercent, zScoreStr, zScoreDesc,
                 coreCustomerStr,
                 yesterdayDwellMins, dwellDiffStr,
