@@ -70,10 +70,7 @@ public class AnalyticsController {
 
     @PostMapping("/analytics/daily-briefing")
     public ResponseEntity<MessageResponseDto> getDailyBriefing() {
-
-        // mock
-        return ResponseEntity.ok(new MessageResponseDto(
-                "오늘 총 방문자 수는 142명으로, 전일 대비 12% 증가했습니다. 오후 2~4시 사이에 피크 타임이 형성되었으며, 20대 여성 고객의 비중이 가장 높았습니다."));
+        return ResponseEntity.ok(analyticsService.getDailyBriefing());
     }
 
     @PostMapping("/analytics/marketing-recommendations")
