@@ -8,6 +8,8 @@ _app.prepare(ctx_id=0, det_size=(640, 640))
 
 def get_analyzer():
     global _app
+    _app = FaceAnalysis(name="buffalo_s", providers=["CUDAExecutionProvider"])
+    _app.prepare(ctx_id=0, det_size=(640, 640))
     if _app is None:
         from insightface.app import FaceAnalysis
         _app = FaceAnalysis(name="buffalo_s", providers=["CPUExecutionProvider"])
