@@ -1,7 +1,8 @@
 """InsightFace 기반 연령/성별 추정 모듈."""
 import numpy as np
 
-_app = None
+_app = FaceAnalysis(name="buffalo_s", providers=["CUDAExecutionProvider"])
+_app.prepare(ctx_id=0, det_size=(640, 640))
 
 
 def get_analyzer():
