@@ -38,7 +38,7 @@ def _peak_congestion(counts: list[int]) -> str:
     return "low"
 
 
-def analyze(video_path: str, date: str) -> DailyAnalysis:
+def analyze(video_path: str) -> DailyAnalysis:
     from ultralytics import YOLO
 
     cap = cv2.VideoCapture(video_path)
@@ -158,7 +158,7 @@ def analyze(video_path: str, date: str) -> DailyAnalysis:
         ))
 
     return DailyAnalysis(
-        date=date,
+        date="",
         video_metadata=VideoMetadata(
             filename=Path(video_path).name,
             duration_seconds=round(duration, 3),

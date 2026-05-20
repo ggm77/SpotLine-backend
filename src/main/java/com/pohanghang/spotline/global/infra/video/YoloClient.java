@@ -16,7 +16,10 @@ public class YoloClient {
 
     public String analyzeVideo(final String fileName) {
         return yoloWebClient.get()
-                .uri(ANALYZE_URI)
+                .uri(uriBuilder -> uriBuilder
+                        .path(ANALYZE_URI)
+                        .queryParam("path", fileName)
+                        .build())
                 .retrieve()
                 .bodyToMono(String.class)
                 .block();
