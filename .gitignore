@@ -1,6 +1,7 @@
 HELP.md
 .gradle
 .DS_Store
+__pycache__
 application.properties
 application-dev.properties
 application-prod.properties
