@@ -31,13 +31,21 @@ public final class WeekdayPatternCalculator {
         final LocalDate targetDate = requestDto.day().toLocalDate();
         final DayOfWeek targetDayOfWeek = targetDate.getDayOfWeek();
 
-        final Map<LocalDate, Integer> dailyVisits = new HashMap<>();
+        final Map<LocalDate, int[]> dailyVisitStats = new HashMap<>();
         for (AnalyticsRepository.WeatherImpactRow row : rows) {
             if (row.getStartAt() == null || row.getTotalCount() == null) {
                 continue;
             }
             final LocalDate date = row.getStartAt().toLocalDate();
-            dailyVisits.merge(date, row.getTotalCount(), Integer::sum);
+            int[] stats = dailyVisitStats.computeIfAbsent(date, k -> new int[2]);
+            stats[0] += row.getTotalCount();
+            stats[1]++;
+        }
+
+        final Map<LocalDate, Integer> dailyVisits = new HashMap<>();
+        for (Map.Entry<LocalDate, int[]> entry : dailyVisitStats.entrySet()) {
+            int[] stats = entry.getValue();
+            dailyVisits.put(entry.getKey(), (int) Math.round((double) stats[0] / stats[1]));
         }
 
         if (!dailyVisits.containsKey(targetDate)) {
