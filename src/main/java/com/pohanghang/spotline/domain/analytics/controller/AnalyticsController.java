@@ -77,4 +77,9 @@ public class AnalyticsController {
     public ResponseEntity<MessageResponseDto> getMarketingRecommendations() {
         return ResponseEntity.ok(analyticsService.getMarketingRecommendations());
     }
+    @GetMapping("/analytics/visits/daily")
+    public ResponseEntity<DailyVisitCountResponseDto> getDailyVisitCount(
+            @RequestParam(value = "date") @org.springframework.format.annotation.DateTimeFormat(iso = org.springframework.format.annotation.DateTimeFormat.ISO.DATE) java.time.LocalDate date) {
+        return ResponseEntity.ok(analyticsService.getDailyVisitCount(date));
+    }
 }

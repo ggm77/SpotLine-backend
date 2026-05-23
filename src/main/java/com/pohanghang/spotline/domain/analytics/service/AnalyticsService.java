@@ -450,4 +450,27 @@ public class AnalyticsService {
         String responseMessage = geminiClient.generateContent(prompt);
         return new MessageResponseDto(responseMessage);
     }
+
+    @Transactional(readOnly = true)
+    public DailyVisitCountResponseDto getDailyVisitCount(LocalDate date) {
+        if (date == null) {
+            throw new CustomException(ExceptionCode.INVALID_REQUEST);
+        }
+
+        List<AnalyticsRepository.WeatherImpactRow> rows = analyticsRepository.findWeatherImpactRows();
+
+        int visitSum = 0;
+        int visitCount = 0;
+
+        for (AnalyticsRepository.WeatherImpactRow row : rows) {
+            if (row.getStartAt() == null || row.getTotalCount() == null) continue;
+            if (row.getStartAt().toLocalDate().equals(date)) {
+                visitSum += row.getTotalCount();
+                visitCount++;
+            }
+        }
+
+        int dailyVisits = visitCount > 0 ? Math.round((float) visitSum / visitCount) : 0;
+        return new DailyVisitCountResponseDto(dailyVisits);
+    }
 }
