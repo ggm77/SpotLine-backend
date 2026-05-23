@@ -9,10 +9,12 @@ import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Component;
 import org.springframework.web.reactive.function.client.WebClient;
 
+import java.time.Duration;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.util.List;
+import reactor.util.retry.Retry;
 
 @Component
 public class OpenMeteoClient {
@@ -50,6 +52,8 @@ public class OpenMeteoClient {
                         .build())
                 .retrieve()
                 .bodyToMono(OpenMeteoResponseDto.class)
+                .timeout(Duration.ofSeconds(10))
+                .retryWhen(Retry.backoff(3, Duration.ofSeconds(1)))
                 .block();
 
         if (response == null || response.current() == null) {
@@ -89,6 +93,8 @@ public class OpenMeteoClient {
                         .build())
                 .retrieve()
                 .bodyToMono(OpenMeteoHourlyResponseDto.class)
+                .timeout(Duration.ofSeconds(10))
+                .retryWhen(Retry.backoff(3, Duration.ofSeconds(1)))
                 .block();
 
         if (response == null || response.hourly() == null || response.hourly().time() == null) {

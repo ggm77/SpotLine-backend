@@ -50,63 +50,84 @@ public class VideoAnalyze {
             final LocalDateTime startAt,
             final LocalDateTime endAt
     ) {
-        final Path path = storageManager.getPath(video.getName());
-        final int durationSec = getVideoLength(path.toString());
-        int startTime = 0;
-        int chunkIndex = 0;
+        try {
+            final Path path = storageManager.getPath(video.getName());
+            final int durationSec = getVideoLength(path.toString());
+            int startTime = 0;
+            int chunkIndex = 0;
 
-        final Path outputDir = path.getParent();
-        final OpenMeteoClient.WeatherData weatherData = openMeteoClient.getSeoulWeatherData(startAt);
-
-        while (startTime < durationSec) {
-            final String chunkFileName = "chunk_"+UUID.randomUUID().toString().substring(0,8)+"_"+chunkIndex+".mp4";
-            final Path chunkPath = outputDir.resolve(chunkFileName);
-
+            final Path outputDir = path.getParent();
+            
+            // 외부 날씨 API 호출 실패(타임아웃 등) 시에도 영상 분석이 중단되지 않도록 폴백 처리
+            OpenMeteoClient.WeatherData weatherData;
             try {
-                // 1. FFmpeg를 통해 10분짜리 세그먼트 하나 생성
-                cutVideoSegment(path.toString(), chunkPath.toString(), startTime, CHUNK_SIZE);
-
-                if (!chunkPath.toFile().exists()) {
-                    log.error("FFmpeg 영상 분할 실패: {}번째 영상", chunkIndex+1);
-                    throw new CustomException(ExceptionCode.FFMPEG_ERROR);
-                }
-
-                // 2. 외부 API로 영상 분석 요청
-                final RawAnalyticsDto rawAnalyticsDto = RawAnalysisParser.parse(yoloClient.analyzeVideo(chunkPath.toString()));
-
-                final LocalDateTime chunkStartAt = startAt.plusSeconds(startTime);
-                final LocalDateTime chunkEndAt = startAt.plusSeconds(Math.min(startTime + CHUNK_SIZE, durationSec));
-
-                // 분석 결과 파싱해서 DB 저장
-                final Analytics analytics = RawAnalysisConverter.toEntity(rawAnalyticsDto, chunkStartAt, chunkEndAt);
-                analytics.updateVideo(video);
-                analytics.updateWeather(weatherData.weather());
-                analytics.updateTemperature(weatherData.temperature());
-                analyticsRepository.save(analytics);
-
+                weatherData = openMeteoClient.getSeoulWeatherData(startAt);
             } catch (Exception ex) {
-                // 예외 발생 시 로그를 남기고 비즈니스 요구사항에 따라 멈추거나 다음  chunk로 진행
-                log.error("{}번째 세그먼트 처리 중 오류 발생: {}",chunkIndex, ex.getMessage());
-            } finally {
-                // 3. 분석 완료 후 세그먼트 파일 즉시 삭제 (디스크 공간 확보)
-                if (chunkPath.toFile().exists()) {
-                    final boolean deleted = chunkPath.toFile().delete();
-                    if (!deleted) {
-                        log.error("파일 삭제 실패 (프로세스가 점유 중일 수 있음): {}번째 영상", chunkIndex+1);
-                    }
-                }
+                log.warn("날씨 API 호출 실패 (기본값 대체): {}. 기본 날씨 정보(흐림, 18.0도)로 비디오 분석을 진행합니다.", ex.getMessage());
+                weatherData = new OpenMeteoClient.WeatherData(18.0, 0.0, com.pohanghang.spotline.domain.analytics.entity.Weather.CLOUDY);
             }
 
-            startTime += CHUNK_SIZE;
-            chunkIndex++;
-        }
+            while (startTime < durationSec) {
+                final String chunkFileName = "chunk_"+UUID.randomUUID().toString().substring(0,8)+"_"+chunkIndex+".mp4";
+                final Path chunkPath = outputDir.resolve(chunkFileName);
 
-        // 영상 처리 완료 되었다고 저장
-        final Video savedVideo = videoRepository.findById(video.getId())
-                .orElseThrow(() -> new CustomException(ExceptionCode.VIDEO_NOT_FOUND));
-        savedVideo.updateStatus(Status.COMPLETE);
-        videoRepository.save(savedVideo);
-        log.info("영상 처리 성공: {}", video.getName());
+                try {
+                    // 1. FFmpeg를 통해 10분짜리 세그먼트 하나 생성
+                    cutVideoSegment(path.toString(), chunkPath.toString(), startTime, CHUNK_SIZE);
+
+                    if (!chunkPath.toFile().exists()) {
+                        log.error("FFmpeg 영상 분할 실패: {}번째 영상", chunkIndex+1);
+                        throw new CustomException(ExceptionCode.FFMPEG_ERROR);
+                    }
+
+                    // 2. 외부 API로 영상 분석 요청
+                    final RawAnalyticsDto rawAnalyticsDto = RawAnalysisParser.parse(yoloClient.analyzeVideo(chunkPath.toString()));
+
+                    final LocalDateTime chunkStartAt = startAt.plusSeconds(startTime);
+                    final LocalDateTime chunkEndAt = startAt.plusSeconds(Math.min(startTime + CHUNK_SIZE, durationSec));
+
+                    // 분석 결과 파싱해서 DB 저장
+                    final Analytics analytics = RawAnalysisConverter.toEntity(rawAnalyticsDto, chunkStartAt, chunkEndAt);
+                    analytics.updateVideo(video);
+                    analytics.updateWeather(weatherData.weather());
+                    analytics.updateTemperature(weatherData.temperature());
+                    analyticsRepository.save(analytics);
+
+                } catch (Exception ex) {
+                    // 예외 발생 시 로그를 남기고 비즈니스 요구사항에 따라 멈추거나 다음  chunk로 진행
+                    log.error("{}번째 세그먼트 처리 중 오류 발생: {}",chunkIndex, ex.getMessage());
+                } finally {
+                    // 3. 분석 완료 후 세그먼트 파일 즉시 삭제 (디스크 공간 확보)
+                    if (chunkPath.toFile().exists()) {
+                        final boolean deleted = chunkPath.toFile().delete();
+                        if (!deleted) {
+                            log.error("파일 삭제 실패 (프로세스가 점유 중일 수 있음): {}번째 영상", chunkIndex+1);
+                        }
+                    }
+                }
+
+                startTime += CHUNK_SIZE;
+                chunkIndex++;
+            }
+
+            // 영상 처리 완료 되었다고 저장
+            final Video savedVideo = videoRepository.findById(video.getId())
+                    .orElseThrow(() -> new CustomException(ExceptionCode.VIDEO_NOT_FOUND));
+            savedVideo.updateStatus(Status.COMPLETE);
+            videoRepository.save(savedVideo);
+            log.info("영상 처리 성공: {}", video.getName());
+        } catch (Exception ex) {
+            log.error("영상 분석 중 치명적 오류 발생: {}", ex.getMessage(), ex);
+            try {
+                final Video savedVideo = videoRepository.findById(video.getId()).orElse(null);
+                if (savedVideo != null) {
+                    savedVideo.updateStatus(Status.ERROR);
+                    videoRepository.save(savedVideo);
+                }
+            } catch (Exception dbEx) {
+                log.error("영상 상태를 ERROR로 업데이트하는 중 에러 발생: {}", dbEx.getMessage(), dbEx);
+            }
+        }
     }
 
     private int getVideoLength(final String filePath) {
