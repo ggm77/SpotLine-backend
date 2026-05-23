@@ -3,7 +3,7 @@ from pathlib import Path
 BASE_DIR = Path(__file__).parent
 VIDEOS_DIR = BASE_DIR / "videos"
 
-YOLO_MODEL = "yolov10n.pt"
+YOLO_MODEL = "yolov10m.pt"
 YOLO_CONF = 0.4
 
 # 분석 주기: N 프레임마다 YOLO 추적 실행
