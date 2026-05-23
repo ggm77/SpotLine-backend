@@ -2,18 +2,14 @@
 import numpy as np
 from insightface.app import FaceAnalysis
 
-_app = FaceAnalysis(name="buffalo_s", providers=["CUDAExecutionProvider"])
-_app.prepare(ctx_id=0, det_size=(640, 640))
-
+_app = None
 
 def get_analyzer():
     global _app
-    _app = FaceAnalysis(name="buffalo_s", providers=["CUDAExecutionProvider"])
-    _app.prepare(ctx_id=0, det_size=(640, 640))
     if _app is None:
-        from insightface.app import FaceAnalysis
-        _app = FaceAnalysis(name="buffalo_s", providers=["CPUExecutionProvider"])
-        _app.prepare(ctx_id=0, det_size=(320, 320))
+        # CUDA를 우선 사용하고, 실패 시 CPU로 폴백
+        _app = FaceAnalysis(name="buffalo_s", providers=["CUDAExecutionProvider", "CPUExecutionProvider"])
+        _app.prepare(ctx_id=0, det_size=(640, 640))
     return _app
 
 
