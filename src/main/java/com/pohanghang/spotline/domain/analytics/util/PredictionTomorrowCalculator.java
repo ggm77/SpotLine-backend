@@ -39,9 +39,9 @@ public class PredictionTomorrowCalculator {
         for (int i = sortedDates.size() - 1; i >= 0; i--) {
             LocalDate d = sortedDates.get(i);
             if (d.getDayOfWeek() == targetDayOfWeek && d.isBefore(targetDate)) {
-                sameDayVisits.add(dailyData.get(d).totalVisits);
+                sameDayVisits.add(dailyData.get(d).getTotalVisits());
                 if (count4Weeks < 4) {
-                    sum4Weeks += dailyData.get(d).totalVisits;
+                    sum4Weeks += dailyData.get(d).getTotalVisits();
                     count4Weeks++;
                 }
             }
@@ -50,21 +50,22 @@ public class PredictionTomorrowCalculator {
         double baseValue = count4Weeks > 0 ? sum4Weeks / count4Weeks : 0.0;
         if (baseValue == 0.0) {
             // fallback: use overall average
-            double overallAvg = dailyData.values().stream().mapToInt(v -> v.totalVisits).average().orElse(0);
+            double overallAvg = dailyData.values().stream().mapToInt(v -> v.getTotalVisits()).average().orElse(0);
             baseValue = overallAvg;
         }
 
         // 3. Weather adjustment (과거 유사 날씨 날들의 평균 방문 / 전체 평균 방문)
-        double totalAvgVisits = dailyData.values().stream().mapToInt(v -> v.totalVisits).average().orElse(0);
+        double totalAvgVisits = dailyData.values().stream().mapToInt(v -> v.getTotalVisits()).average().orElse(0);
         
         List<Integer> similarWeatherVisits = dailyData.values().stream()
                 .filter(stats -> stats.weather == tomorrowWeather)
-                .map(stats -> stats.totalVisits)
+                .map(stats -> stats.getTotalVisits())
                 .toList();
         
         double weatherAvgVisits = similarWeatherVisits.stream().mapToInt(Integer::intValue).average().orElse(totalAvgVisits);
         
         double weatherCoefficient = totalAvgVisits > 0 ? weatherAvgVisits / totalAvgVisits : 1.0;
+        weatherCoefficient = Math.max(0.5, Math.min(1.5, weatherCoefficient));
 
         // 4. Trend reflection (MA5 / MA20)
         double ma5 = getMovingAverage(sortedDates, dailyData, 5);
@@ -73,6 +74,7 @@ public class PredictionTomorrowCalculator {
         double trendCoefficient = 1.0;
         if (ma20 > 0) {
             trendCoefficient = ma5 / ma20;
+            trendCoefficient = Math.max(0.5, Math.min(1.5, trendCoefficient));
         }
 
         // 5. Final Prediction
@@ -102,7 +104,7 @@ public class PredictionTomorrowCalculator {
         int count = 0;
         double sum = 0;
         for (int i = sortedDates.size() - 1; i >= Math.max(0, sortedDates.size() - days); i--) {
-            sum += dailyData.get(sortedDates.get(i)).totalVisits;
+            sum += dailyData.get(sortedDates.get(i)).getTotalVisits();
             count++;
         }
         return count > 0 ? sum / count : 0.0;
@@ -118,7 +120,8 @@ public class PredictionTomorrowCalculator {
     private static class DailyStats {
         LocalDate date;
         Weather weather;
-        int totalVisits = 0;
+        private int sumVisits = 0;
+        private int recordCount = 0;
 
         public DailyStats(LocalDate date, Weather weather) {
             this.date = date;
@@ -126,7 +129,12 @@ public class PredictionTomorrowCalculator {
         }
 
         public void addVisits(int visits) {
-            this.totalVisits += visits;
+            this.sumVisits += visits;
+            this.recordCount++;
+        }
+
+        public int getTotalVisits() {
+            return recordCount > 0 ? (int) Math.round((double) sumVisits / recordCount) : 0;
         }
     }
 }

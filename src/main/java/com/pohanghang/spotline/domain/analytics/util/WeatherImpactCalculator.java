@@ -274,7 +274,8 @@ public final class WeatherImpactCalculator {
 
     private static class DailyWeatherVisit {
         private final LocalDate date;
-        private int totalCount;
+        private int sumCount;
+        private int recordCount;
         private int rain;
         private boolean hasWeather;
         private double temperatureSum;
@@ -289,7 +290,8 @@ public final class WeatherImpactCalculator {
                 final Weather weather,
                 final Double temperature
         ) {
-            this.totalCount += totalCount;
+            this.sumCount += totalCount;
+            this.recordCount++;
             if (weather != null) {
                 this.hasWeather = true;
                 this.rain = Math.max(this.rain, toRainValue(weather));
@@ -305,7 +307,7 @@ public final class WeatherImpactCalculator {
         }
 
         private int totalCount() {
-            return totalCount;
+            return recordCount > 0 ? (int) Math.round((double) sumCount / recordCount) : 0;
         }
 
         private Integer rain() {

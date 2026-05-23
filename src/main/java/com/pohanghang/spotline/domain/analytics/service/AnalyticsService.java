@@ -110,20 +110,30 @@ public class AnalyticsService {
 
         final List<AnalyticsRepository.HourlyPopulationGroup> hourlyPopulationGroups =
                 analyticsRepository.findHourlyPopulationGroups(startAt, endAt);
+
+        int totalCount = 0;
         for (AnalyticsRepository.HourlyPopulationGroup hourlyPopulationGroup : hourlyPopulationGroups) {
+            int count = Math.toIntExact(hourlyPopulationGroup.getTotalCount());
             ageGroupCounts.put(
                     hourlyPopulationGroup.getAgeGroup(),
-                    Math.toIntExact(hourlyPopulationGroup.getTotalCount())
+                    count
             );
+            if (hourlyPopulationGroup.getAgeGroup() != AgeGroup.UNKNOWN) {
+                totalCount += count;
+            }
+        }
+
+        if (totalCount == 0) {
+            return new AgeGroupDistributionDto(0, 0, 0, 0, 0, 0);
         }
 
         return new AgeGroupDistributionDto(
-                ageGroupCounts.get(AgeGroup.CHILD),
-                ageGroupCounts.get(AgeGroup.TEN),
-                ageGroupCounts.get(AgeGroup.TWENTY),
-                ageGroupCounts.get(AgeGroup.THIRTY),
-                ageGroupCounts.get(AgeGroup.FORTY),
-                ageGroupCounts.get(AgeGroup.FIFTY_PLUS)
+                (int) Math.round((double) ageGroupCounts.get(AgeGroup.CHILD) / totalCount * 100),
+                (int) Math.round((double) ageGroupCounts.get(AgeGroup.TEN) / totalCount * 100),
+                (int) Math.round((double) ageGroupCounts.get(AgeGroup.TWENTY) / totalCount * 100),
+                (int) Math.round((double) ageGroupCounts.get(AgeGroup.THIRTY) / totalCount * 100),
+                (int) Math.round((double) ageGroupCounts.get(AgeGroup.FORTY) / totalCount * 100),
+                (int) Math.round((double) ageGroupCounts.get(AgeGroup.FIFTY_PLUS) / totalCount * 100)
         );
     }
 
@@ -217,20 +227,27 @@ public class AnalyticsService {
 
         List<AnalyticsRepository.WeatherImpactRow> rows = analyticsRepository.findWeatherImpactRows();
 
-        int yesterdayVisits = 0;
-        int lastWeekVisits = 0;
+        int yesterdayVisitsSum = 0;
+        int yesterdayVisitsCount = 0;
+        int lastWeekVisitsSum = 0;
+        int lastWeekVisitsCount = 0;
         Weather yesterdayWeather = Weather.SUNNY;
 
         for (AnalyticsRepository.WeatherImpactRow row : rows) {
             if (row.getStartAt() == null || row.getTotalCount() == null) continue;
             LocalDate rowDate = row.getStartAt().toLocalDate();
             if (rowDate.equals(yesterday)) {
-                yesterdayVisits += row.getTotalCount();
+                yesterdayVisitsSum += row.getTotalCount();
+                yesterdayVisitsCount++;
                 if (row.getWeather() != null) yesterdayWeather = row.getWeather();
             } else if (rowDate.equals(yesterday.minusDays(7))) {
-                lastWeekVisits += row.getTotalCount();
+                lastWeekVisitsSum += row.getTotalCount();
+                lastWeekVisitsCount++;
             }
         }
+        
+        int yesterdayVisits = yesterdayVisitsCount > 0 ? Math.round((float) yesterdayVisitsSum / yesterdayVisitsCount) : 0;
+        int lastWeekVisits = lastWeekVisitsCount > 0 ? Math.round((float) lastWeekVisitsSum / lastWeekVisitsCount) : 0;
         
         int diffPercent = lastWeekVisits > 0 ? (int) Math.round((double)(yesterdayVisits - lastWeekVisits) / lastWeekVisits * 100) : 0;
         String diffSign = diffPercent >= 0 ? "+" : "";
