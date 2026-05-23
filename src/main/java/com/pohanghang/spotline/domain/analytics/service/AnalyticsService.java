@@ -42,6 +42,8 @@ public class AnalyticsService {
             AgeGroup.UNKNOWN, "UNKNOWN"
     );
 
+    private static final String SYSTEM_PROMPT = "지금부터 당신은 마케팅 전문가가 되어 사장님을 위한 마케팅/ 운영 제안을 전략적이게 제안합니다.\n";
+
     private final AnalyticsRepository analyticsRepository;
     private final VideoRepository videoRepository;
     private final OpenMeteoClient openMeteoClient;
@@ -320,6 +322,7 @@ public class AnalyticsService {
         }
 
         String prompt = String.format(
+                SYSTEM_PROMPT +
                 "어제 방문 %d명 (%s%d%%, z=%s, %s).\n" +
                 "핵심 고객 %s.\n" +
                 "평균 체류 %d분 (평소%s분).\n" +
@@ -443,7 +446,8 @@ public class AnalyticsService {
             triggers.append("- 현재 특별한 하락세나 이상 신호가 없습니다. 꾸준한 성장을 위한 일반적인 마케팅 아이디어 1줄 제안해줘.\n");
         }
 
-        String prompt = "다음 상황(트리거)들을 분석하여 사장님을 위한 마케팅/운영 제안을 작성해줘.\n" +
+        String prompt = SYSTEM_PROMPT +
+                "다음 상황(트리거)들을 분석하여 사장님을 위한 마케팅/운영 제안을 작성해줘.\n" +
                 "각 제안은 💡 기호로 시작하고, 상황 설명 후 행동 제안을 2~3줄로 해줘. 구분선(──────────────────────)을 사용해서 여러 제안을 분리해줘.\n\n" +
                 "상황:\n" + triggers.toString();
 
