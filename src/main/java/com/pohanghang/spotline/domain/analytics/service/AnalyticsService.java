@@ -42,7 +42,7 @@ public class AnalyticsService {
             AgeGroup.UNKNOWN, "UNKNOWN"
     );
 
-    private static final String SYSTEM_PROMPT = "지금부터 당신은 마케팅 전문가가 되어 사장님을 위한 마케팅/ 운영 제안을 전략적이게 제안합니다.\n";
+    private static final String SYSTEM_PROMPT = "지금부터 당신은 마케팅 전문가가 되어 사장님을 위한 마케팅/운영 제안을 전략적이게 제안합니다.\n볼드 표시를 포함한 각종 md파일을 위한 표현을 전부 제외하고, 오로지 자연어와 숫자로만 대답해.";
 
     private final AnalyticsRepository analyticsRepository;
     private final VideoRepository videoRepository;
@@ -448,7 +448,7 @@ public class AnalyticsService {
 
         String prompt = SYSTEM_PROMPT +
                 "다음 상황(트리거)들을 분석하여 사장님을 위한 마케팅/운영 제안을 작성해줘.\n" +
-                "각 제안은 💡 기호로 시작하고, 상황 설명 후 행동 제안을 2~3줄로 해줘. 구분선(──────────────────────)을 사용해서 여러 제안을 분리해줘.\n\n" +
+                "각 제안은 💡 기호로 시작하고, 상황 설명 후 행동 제안을 2~3줄로 해줘.\n\n" +
                 "상황:\n" + triggers.toString();
 
         String responseMessage = geminiClient.generateContent(prompt);
