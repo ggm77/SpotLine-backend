@@ -84,6 +84,7 @@ public class AnalyticsService {
                 analyticsRepository.findCoreCustomerGroups(startAt, endAt);
 
         return coreCustomerGroups.stream()
+                .filter(group -> group.getAgeGroup() != AgeGroup.UNKNOWN && !"UNKNOWN".equals(group.getGender().name()))
                 .findFirst()
                 .map(coreCustomerGroup -> new CoreCustomerResponseDto(
                         coreCustomerGroup.getGender().name(),
