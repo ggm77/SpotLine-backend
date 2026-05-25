@@ -25,7 +25,6 @@ public class RawAnalysisConverter {
                 .peakCongestion(toCongestion(summary.peakCongestion()))
                 .avgDwellTimeSeconds(summary.avgDwellTimeSeconds())
                 .totalCount(summary.totalVisitors())
-                .rawData(JsonUtil.toJson(rawAnalyticsDto))
                 .build();
 
         final List<AnalyticsPerson> personList = toAnalyticsPersons(rawAnalyticsDto.persons(), analytics);
