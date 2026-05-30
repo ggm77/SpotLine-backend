@@ -7,6 +7,7 @@ import com.pohanghang.spotline.global.exception.CustomException;
 import com.pohanghang.spotline.global.exception.constants.ExceptionCode;
 import lombok.RequiredArgsConstructor;
 import org.springframework.core.io.Resource;
+import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
@@ -15,6 +16,7 @@ import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
 import java.time.LocalDateTime;
+import java.time.OffsetDateTime;
 
 @RequiredArgsConstructor
 @RequestMapping("/api/v1")
@@ -31,6 +33,17 @@ public class VideoController {
     ) {
 
         return ResponseEntity.ok(videoService.uploadVideo(multipartFile, startAt, endAt));
+    }
+
+    @PostMapping(value = "/video/stream", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public ResponseEntity<Void> streamVideo(
+            @RequestParam(value = "createdAt") @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) final OffsetDateTime createdAt,
+            @RequestPart(value = "fileChunk") final MultipartFile fileChunk
+    ) {
+
+        videoService.saveStreamChunk(createdAt, fileChunk);
+
+        return ResponseEntity.noContent().build();
     }
 
     @GetMapping("/video/{id}")

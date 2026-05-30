@@ -11,6 +11,7 @@ import org.springframework.web.multipart.MultipartFile;
 import java.io.File;
 import java.nio.file.Path;
 import java.time.Instant;
+import java.time.OffsetDateTime;
 import java.util.UUID;
 
 /**
@@ -52,6 +53,43 @@ public class StorageManager {
         final Path path = toPath(SAVE_PATH, name);
 
         // 6) 임시 폴더에 저장
+        storageIoCore.write(multipartFile, path);
+
+        return path;
+    }
+
+    /**
+     * 스트리밍으로 들어온 영상 청크를 저장하는 메서드.
+     * 청크는 촬영 시점(createdAt) 순으로 정렬해서 사용해야 하므로,
+     * 파일명 앞에 촬영 시점의 epochMilli 를 붙여 정렬 가능하게 저장한다.
+     * @param multipartFile 청크로 나뉜 영상 파일
+     * @param createdAt 영상이 찍힌 시점
+     * @return 저장된 파일의 절대 경로
+     */
+    public Path saveStreamChunk(
+            final MultipartFile multipartFile,
+            final OffsetDateTime createdAt
+    ) {
+        // 1) null 체크
+        if (multipartFile == null) {
+            throw new CustomException(ExceptionCode.INVALID_FILE);
+        }
+        if (createdAt == null) {
+            throw new CustomException(ExceptionCode.INVALID_REQUEST);
+        }
+
+        // 2) 확장자 추출
+        final String extension = extractExtension(multipartFile.getOriginalFilename());
+
+        // 3) 촬영 시점 기준 정렬이 가능하도록 epochMilli 를 접두어로 사용
+        final long epochMilli = createdAt.toInstant().toEpochMilli();
+        final String name = "chunk_" + epochMilli + "_" + UUID.randomUUID()
+                + (extension.isBlank() ? "" : "." + extension);
+
+        // 4) 저장할 경로 생성
+        final Path path = toPath(SAVE_PATH, name);
+
+        // 5) 저장
         storageIoCore.write(multipartFile, path);
 
         return path;

@@ -1,0 +1,27 @@
+package com.pohanghang.spotline.domain.vision.controller;
+
+import com.pohanghang.spotline.domain.vision.dto.VisionDataRequestDto;
+import com.pohanghang.spotline.domain.vision.service.VisionService;
+import lombok.RequiredArgsConstructor;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
+
+@RestController
+@RequestMapping("/api/v2")
+@RequiredArgsConstructor
+public class VisionController {
+
+    private final VisionService visionService;
+
+    // 비전 AI 분석 데이터 입력
+    @PostMapping("/vision/data")
+    public ResponseEntity<Void> createVisionData(
+            @RequestBody final VisionDataRequestDto visionDataRequestDto
+    ) {
+        visionService.saveVisionData(visionDataRequestDto);
+        return ResponseEntity.noContent().build();
+    }
+}
