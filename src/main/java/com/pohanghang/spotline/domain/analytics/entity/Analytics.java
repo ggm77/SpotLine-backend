@@ -48,6 +48,10 @@ public class Analytics {
 
     private Double temperature;
 
+    @Lob
+    @Column(columnDefinition = "TEXT", nullable = false)
+    private String rawData; // 영상에서 추출한 원본 데이터 그대로
+
     @OneToMany(mappedBy = "analytics", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<AnalyticsPerson> persons = new ArrayList<>();
 
@@ -63,7 +67,8 @@ public class Analytics {
             final Double avgDwellTimeSeconds,
             final Integer totalCount,
             final Weather weather,
-            final Double temperature
+            final Double temperature,
+            final String rawData
     ) {
         this.video = video;
         this.startAt = startAt;
@@ -73,6 +78,7 @@ public class Analytics {
         this.totalCount = totalCount;
         this.weather = weather;
         this.temperature = temperature;
+        this.rawData = rawData;
     }
 
     public void updateVideo(final Video video) {
