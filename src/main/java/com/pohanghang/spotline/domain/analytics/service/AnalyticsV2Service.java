@@ -21,12 +21,14 @@ import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.HashMap;
-import java.util.IntSummaryStatistics;
 import java.util.List;
 import java.util.Map;
 
 /**
  * v2 통계 API. 비전 AI가 적재한 {@link VisionData} 스냅샷들을 집계한다.
+ *
+ * <p>모든 필드는 null 로 들어올 수 있으므로, 집계 시에는 null 을 제외하고 계산하며
+ * 단일 대표값이 필요한 경우(핵심 고객 등)에는 null 을 제외한 최신 값으로 대체한다.</p>
  */
 @Service
 @RequiredArgsConstructor
@@ -50,27 +52,29 @@ public class AnalyticsV2Service {
         return new CountResponseDto(count);
     }
 
-    // 몇 시가 가장 바쁜가 - 구간 내 방문자가 가장 많았던 스냅샷의 peakTime
+    // 몇 시가 가장 바쁜가 - 구간 내(peakTime 이 null 이 아닌) 방문자가 가장 많았던 스냅샷의 peakTime
     @Transactional(readOnly = true)
     public TimeResponseDto getPeakTime(final LocalDateTime startAt, final LocalDateTime endAt) {
         validateRange(startAt, endAt);
 
         final int time = findOverlapping(startAt, endAt).stream()
                 .filter(visionData -> visionData.getPeakTime() != null)
-                .max(Comparator.comparingInt(visionData -> nullToZero(visionData.getTotalCount())))
+                .max(Comparator.comparingInt(visionData ->
+                        visionData.getTotalCount() == null ? 0 : visionData.getTotalCount()))
                 .map(VisionData::getPeakTime)
                 .orElse(0);
 
         return new TimeResponseDto(time);
     }
 
-    // 오늘 매출 얼마인가 - POS 연동 전까지 방문자 수 기반 추정 매출
+    // 오늘 매출 얼마인가 - POS 연동 전까지 방문자 수(null 제외) 기반 추정 매출
     @Transactional(readOnly = true)
     public DailySalesResponseDto getDailySales(final LocalDateTime startAt, final LocalDateTime endAt) {
         validateRange(startAt, endAt);
 
         final int visitors = findOverlapping(startAt, endAt).stream()
-                .mapToInt(visionData -> nullToZero(visionData.getTotalCount()))
+                .filter(visionData -> visionData.getTotalCount() != null)
+                .mapToInt(VisionData::getTotalCount)
                 .sum();
 
         return new DailySalesResponseDto(visitors * ESTIMATED_SPEND_PER_VISITOR);
@@ -84,7 +88,7 @@ public class AnalyticsV2Service {
         return new MenuResponseDto(DEFAULT_BEST_MENU);
     }
 
-    // 최대 응대 대기 시간 - 구간 내 maxResponseWaitTime 의 최댓값
+    // 최대 응대 대기 시간 - 구간 내 maxResponseWaitTime(null 제외)의 최댓값
     @Transactional(readOnly = true)
     public TimeResponseDto getResponseWaitTime(final LocalDateTime startAt, final LocalDateTime endAt) {
         validateRange(startAt, endAt);
@@ -98,19 +102,20 @@ public class AnalyticsV2Service {
         return new TimeResponseDto(time);
     }
 
-    // 그냥 나간 손님 수 - 구간 내 justLeftCount 합계
+    // 그냥 나간 손님 수 - 구간 내 justLeftCount(null 제외) 합계
     @Transactional(readOnly = true)
     public CountResponseDto getJustLeftCount(final LocalDateTime startAt, final LocalDateTime endAt) {
         validateRange(startAt, endAt);
 
         final int count = findOverlapping(startAt, endAt).stream()
-                .mapToInt(visionData -> nullToZero(visionData.getJustLeftCount()))
+                .filter(visionData -> visionData.getJustLeftCount() != null)
+                .mapToInt(VisionData::getJustLeftCount)
                 .sum();
 
         return new CountResponseDto(count);
     }
 
-    // 최대 테이블 유휴 시간 - 구간 내 maxEmptyTableTime 의 최댓값
+    // 최대 테이블 유휴 시간 - 구간 내 maxEmptyTableTime(null 제외)의 최댓값
     @Transactional(readOnly = true)
     public TimeResponseDto getEmptyTableTime(final LocalDateTime startAt, final LocalDateTime endAt) {
         validateRange(startAt, endAt);
@@ -124,22 +129,23 @@ public class AnalyticsV2Service {
         return new TimeResponseDto(time);
     }
 
-    // 평균과 비교해서 오늘 얼마나 왔는지 - 구간 합계 vs 전체 일평균
+    // 평균과 비교해서 오늘 얼마나 왔는지 - 구간 합계(null 제외) vs 전체 일평균(null 제외)
     @Transactional(readOnly = true)
     public DailyCountResponseDto getDailyCount(final LocalDateTime startAt, final LocalDateTime endAt) {
         validateRange(startAt, endAt);
 
         final int count = findOverlapping(startAt, endAt).stream()
-                .mapToInt(visionData -> nullToZero(visionData.getTotalCount()))
+                .filter(visionData -> visionData.getTotalCount() != null)
+                .mapToInt(VisionData::getTotalCount)
                 .sum();
 
-        // 전체 데이터를 일자별로 합산한 뒤 일평균 계산
+        // 전체 데이터를 일자별로 합산한 뒤 일평균 계산 (capturedAt 또는 totalCount 가 null 인 스냅샷은 제외)
         final Map<LocalDate, Integer> dailyTotals = new HashMap<>();
         for (VisionData visionData : visionDataRepository.findAll()) {
-            if (visionData.getCapturedAt() == null) {
+            if (visionData.getCapturedAt() == null || visionData.getTotalCount() == null) {
                 continue;
             }
-            dailyTotals.merge(visionData.getCapturedAt().toLocalDate(), nullToZero(visionData.getTotalCount()), Integer::sum);
+            dailyTotals.merge(visionData.getCapturedAt().toLocalDate(), visionData.getTotalCount(), Integer::sum);
         }
 
         final int avgCount = dailyTotals.isEmpty()
@@ -149,7 +155,7 @@ public class AnalyticsV2Service {
         return new DailyCountResponseDto(count, avgCount);
     }
 
-    // 매장 방문 추세 - 구간 내 스냅샷을 시간순으로 (capturedAt, totalCount) 나열
+    // 매장 방문 추세 - 구간 내 스냅샷을 시간순으로 (capturedAt, totalCount) 나열 (totalCount 가 null 인 스냅샷은 제외)
     @Transactional(readOnly = true)
     public VisitTrendResponseDto getVisitTrend(final LocalDateTime startAt, final LocalDateTime endAt) {
         validateRange(startAt, endAt);
@@ -160,14 +166,17 @@ public class AnalyticsV2Service {
         final List<LocalDateTime> time = new ArrayList<>();
         final List<Integer> data = new ArrayList<>();
         for (VisionData visionData : inRange) {
+            if (visionData.getTotalCount() == null) {
+                continue;
+            }
             time.add(visionData.getCapturedAt());
-            data.add(nullToZero(visionData.getTotalCount()));
+            data.add(visionData.getTotalCount());
         }
 
         return new VisitTrendResponseDto(time, data);
     }
 
-    // 핵심 고객 - 구간 내 방문자들을 (나이대, 성별) 로 묶어 가장 많은 그룹
+    // 핵심 고객 - 구간 내 방문자들을 (나이대, 성별) 로 묶어 가장 많은 그룹 (age/gender 가 null 인 사람은 제외)
     @Transactional(readOnly = true)
     public CoreCustomerV2ResponseDto getCoreCustomer(final LocalDateTime startAt, final LocalDateTime endAt) {
         validateRange(startAt, endAt);
@@ -192,7 +201,7 @@ public class AnalyticsV2Service {
             return new CoreCustomerV2ResponseDto(top.get(0), top.get(1));
         }
 
-        // 개별 방문자 정보가 없으면 스냅샷의 집계된 핵심 고객 필드(가장 최근)로 폴백
+        // 개별 방문자 정보가 없으면 스냅샷의 집계된 핵심 고객 필드(null 제외 최신값)로 대체
         return inRange.stream()
                 .filter(visionData -> visionData.getCoreCustomerAge() != null && visionData.getCoreCustomerGender() != null)
                 .max(Comparator.comparing(VisionData::getCapturedAt))
@@ -200,24 +209,12 @@ public class AnalyticsV2Service {
                 .orElse(new CoreCustomerV2ResponseDto(0, 0));
     }
 
-    // 평균 체류시간 - 방문자별 체류시간(초)의 평균을 분으로, 없으면 스냅샷 avgDwellTime(분) 평균
+    // 평균 체류시간 - 구간 내 스냅샷 avgDwellTime(분, null 제외)의 평균
     @Transactional(readOnly = true)
     public TimeResponseDto getAvgDwell(final LocalDateTime startAt, final LocalDateTime endAt) {
         validateRange(startAt, endAt);
 
-        final List<VisionData> inRange = findOverlapping(startAt, endAt);
-
-        final IntSummaryStatistics personDwell = inRange.stream()
-                .flatMap(visionData -> visionData.getPeople().stream())
-                .filter(person -> person.getDwellTime() != null)
-                .mapToInt(VisionPerson::getDwellTime)
-                .summaryStatistics();
-
-        if (personDwell.getCount() > 0) {
-            return new TimeResponseDto((int) Math.round(personDwell.getAverage() / 60.0));
-        }
-
-        final double avgMinutes = inRange.stream()
+        final double avgMinutes = findOverlapping(startAt, endAt).stream()
                 .filter(visionData -> visionData.getAvgDwellTime() != null)
                 .mapToInt(VisionData::getAvgDwellTime)
                 .average()
@@ -234,9 +231,5 @@ public class AnalyticsV2Service {
         if (startAt == null || endAt == null || !startAt.isBefore(endAt)) {
             throw new CustomException(ExceptionCode.INVALID_REQUEST);
         }
-    }
-
-    private int nullToZero(final Integer value) {
-        return value == null ? 0 : value;
     }
 }
