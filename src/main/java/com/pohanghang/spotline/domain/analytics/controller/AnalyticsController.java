@@ -1,139 +1,85 @@
 package com.pohanghang.spotline.domain.analytics.controller;
 
 import com.pohanghang.spotline.domain.analytics.dto.*;
+import com.pohanghang.spotline.domain.analytics.service.AnalyticsService;
+import com.pohanghang.spotline.domain.video.entity.PerformanceResult;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
-import java.time.LocalDateTime;
 import java.util.Arrays;
 
-@RestController
-@RequestMapping("/api/v2")
 @RequiredArgsConstructor
+@RequestMapping("/api/v1")
+@RestController
 public class AnalyticsController {
 
-    // 지금 몇 명 있나
-    @GetMapping("/analytics/current-count")
-    public ResponseEntity<CountResponseDto> getCurrentCount() {
+    private final AnalyticsService analyticsService;
 
-        // mock
-        return ResponseEntity.ok(new CountResponseDto(10));
+    @GetMapping("/analytics/raw")
+    public ResponseEntity<RawAnalyticsDto> getRawAnalytics(
+            @RequestParam(value = "videoId") final Long videoId) {
+
+        return ResponseEntity.ok(analyticsService.getRawAnalytics(videoId));
     }
 
-    // 몇 시가 가장 바쁜가
-    @GetMapping("/analytics/peek-time")
-    public ResponseEntity<TimeResponseDto> getPeakTime(
-            @RequestParam("startAt") final LocalDateTime startAt,
-            @RequestParam("endAt") final LocalDateTime endAt
-    ) {
+    @PostMapping("/analytics/core-customers")
+    public ResponseEntity<CoreCustomerResponseDto> getCoreCustomers(
+            @RequestBody final DefaultStartAtEndAtRequestDto defaultStartAtEndAtRequestDto) {
 
-        // mock
-        return ResponseEntity.ok(new TimeResponseDto(18));
+        return ResponseEntity.ok(analyticsService.getCoreCustomers(defaultStartAtEndAtRequestDto));
     }
 
-    // 오늘 매출 얼마인가
-    @GetMapping("/analytics/daily-sales")
-    public ResponseEntity<DailySalesResponseDto> getDailySales(
-            @RequestParam("startAt") final LocalDateTime startAt,
-            @RequestParam("endAt") final LocalDateTime endAt
-    ) {
+    @PostMapping("/analytics/hourly-population")
+    public ResponseEntity<AgeGroupDistributionDto> getHourlyPopulation(
+            @RequestBody final DefaultStartAtEndAtRequestDto defaultStartAtEndAtRequestDto) {
 
-        // mock
-        return ResponseEntity.ok(new DailySalesResponseDto(18));
+        return ResponseEntity.ok(analyticsService.getHourlyPopulation(defaultStartAtEndAtRequestDto));
     }
 
-    // 어떤 메뉴가 잘 팔리나
-    @GetMapping("/analytics/best-menu")
-    public ResponseEntity<MenuResponseDto> getBestMenu(
-            @RequestParam("startAt") final LocalDateTime startAt,
-            @RequestParam("endAt") final LocalDateTime endAt
-    ) {
+    @PostMapping("/analytics/weather-impact")
+    public ResponseEntity<PerformanceResultResponseDto> getWeatherImpact(
+            @RequestBody final WeatherImpactRequestDto weatherImpactRequestDto) {
 
-        // mock
-        return ResponseEntity.ok(new MenuResponseDto("삼겹살"));
+        return ResponseEntity.ok(analyticsService.getWeatherImpact(weatherImpactRequestDto));
     }
 
-    // 최대 응대 대기 시간
-    @GetMapping("/analytics/response-wait-time")
-    public ResponseEntity<TimeResponseDto> getResponseWaitTime(
-            @RequestParam("startAt") final LocalDateTime startAt,
-            @RequestParam("endAt") final LocalDateTime endAt
-    ) {
+    @PostMapping("/analytics/weekday-patterns")
+    public ResponseEntity<PerformanceResultResponseDto> getWeekdayPatterns(
+            @RequestBody final WeekdayPatternRequestDto weekdayPatternRequestDto) {
 
-        // mock
-        return ResponseEntity.ok(new TimeResponseDto(3));
+        return ResponseEntity.ok(analyticsService.getWeekdayPatterns(weekdayPatternRequestDto));
     }
 
-    // 그냥 나간 손님 수
-    @GetMapping("/analytics/just-left-count")
-    public ResponseEntity<CountResponseDto> getJustLeftCount(
-            @RequestParam("startAt") final LocalDateTime startAt,
-            @RequestParam("endAt") final LocalDateTime endAt
-    ) {
+    @PostMapping("/analytics/visits/count")
+    public ResponseEntity<VisitCountResponseDto> getVisitCount(
+            @RequestBody final DefaultStartAtEndAtRequestDto defaultStartAtEndAtRequestDto) {
 
-        // mock
-        return ResponseEntity.ok(new CountResponseDto(2));
+        return ResponseEntity.ok(analyticsService.getVisitCount(defaultStartAtEndAtRequestDto));
     }
 
-    // 최대 테이블 유휴 시간
-    @GetMapping("/analytics/empty-table-time")
-    public ResponseEntity<TimeResponseDto> getEmptyTableTime(
-            @RequestParam("startAt") final LocalDateTime startAt,
-            @RequestParam("endAt") final LocalDateTime endAt
-    ) {
-
-        // mock
-        return ResponseEntity.ok(new TimeResponseDto(20));
+    @PostMapping("/analytics/predictions/tomorrow")
+    public ResponseEntity<PredictionTomorrowResponseDto> getPredictionTomorrow() {
+        return ResponseEntity.ok(analyticsService.getPredictionTomorrow());
     }
 
-    // 평균과 비교해서 오늘 얼마나 왔는지
-    @GetMapping("/analytics/daily-count")
-    public ResponseEntity<DailyCountResponseDto> getDailyCount(
-            @RequestParam("startAt") final LocalDateTime startAt,
-            @RequestParam("endAt") final LocalDateTime endAt
-    ) {
-
-        // mock
-        return ResponseEntity.ok(new DailyCountResponseDto(30, 25));
+    @PostMapping("/analytics/predictions/next-week")
+    public ResponseEntity<PredictionNextWeekResponseDto> getPredictionNextWeek() {
+        return ResponseEntity.ok(analyticsService.getPredictionNextWeek());
     }
 
-    // 매장 방문 추세
-    @GetMapping("/analytics/visit-trend")
-    public ResponseEntity<VisitTrendResponseDto> getVisitTrend(
-            @RequestParam("startAt") final LocalDateTime startAt,
-            @RequestParam("endAt") final LocalDateTime endAt
-    ) {
-
-        // mock
-        return ResponseEntity.ok(new VisitTrendResponseDto(
-                Arrays.asList(LocalDateTime.now()),
-                Arrays.asList(30)
-        ));
+    @PostMapping("/analytics/daily-briefing")
+    public ResponseEntity<MessageResponseDto> getDailyBriefing() {
+        return ResponseEntity.ok(analyticsService.getDailyBriefing());
     }
 
-    // 핵심 고객
-    @GetMapping("/analytics/core-customer")
-    public ResponseEntity<CoreCustomerResponseDto> getCoreCustomer(
-            @RequestParam("startAt") final LocalDateTime startAt,
-            @RequestParam("endAt") final LocalDateTime endAt
-    ) {
-
-        // mock
-        return ResponseEntity.ok(new CoreCustomerResponseDto(20, 1));
+    @PostMapping("/analytics/marketing-recommendations")
+    public ResponseEntity<MessageResponseDto> getMarketingRecommendations() {
+        return ResponseEntity.ok(analyticsService.getMarketingRecommendations());
     }
-
-    // 평균 체류 시간
-    @GetMapping("/analytics/avg-dwell")
-    public ResponseEntity<TimeResponseDto> getAvgDwellTime(
-            @RequestParam("startAt") final LocalDateTime startAt,
-            @RequestParam("endAt") final LocalDateTime endAt
-    ) {
-
-        // mock
-        return ResponseEntity.ok(new TimeResponseDto(20));
+    @GetMapping("/analytics/visits/daily")
+    public ResponseEntity<DailyVisitCountResponseDto> getDailyVisitCount(
+            @RequestParam(value = "date") @org.springframework.format.annotation.DateTimeFormat(iso = org.springframework.format.annotation.DateTimeFormat.ISO.DATE) java.time.LocalDate date) {
+        return ResponseEntity.ok(analyticsService.getDailyVisitCount(date));
     }
 }

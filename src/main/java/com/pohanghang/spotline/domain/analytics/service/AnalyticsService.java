@@ -63,8 +63,27 @@ public class AnalyticsService {
         final Analytics analytics = analyticsRepository.findByVideo(video)
                 .orElseThrow(() -> new CustomException(ExceptionCode.ANALYTICS_NOT_FOUND));
 
-        // 4) 문자열 파싱
-        return JsonUtil.toObject(analytics.getRawData(), RawAnalyticsDto.class);
+        // 4) Entity에서 DTO 재구성 (rawData 제거됨)
+        java.util.List<RawAnalyticsDto.Persons> personsList = new java.util.ArrayList<>();
+        for (com.pohanghang.spotline.domain.analytics.entity.AnalyticsPerson ap : analytics.getPersons()) {
+            for (int i = 0; i < ap.getCount(); i++) {
+                personsList.add(new RawAnalyticsDto.Persons(
+                        null,
+                        ap.getGender().name().toLowerCase(),
+                        AGE_GROUP_LABELS.getOrDefault(ap.getAgeGroup(), "unknown"),
+                        null, null, null, null
+                ));
+            }
+        }
+
+        return new RawAnalyticsDto(
+                new RawAnalyticsDto.Summary(
+                        analytics.getTotalCount(),
+                        analytics.getPeakCongestion().name().toLowerCase(),
+                        analytics.getAvgDwellTimeSeconds()
+                ),
+                personsList
+        );
     }
 
     @Transactional(readOnly = true)
