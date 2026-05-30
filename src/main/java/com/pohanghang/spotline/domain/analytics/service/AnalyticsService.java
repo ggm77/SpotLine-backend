@@ -98,7 +98,7 @@ public class AnalyticsService {
         }
 
         if (totalCount == 0) {
-            return new AgeGroupDistributionDto(0, 0, 0, 0, 0, 0);
+            return new AgeGroupDistributionDto(-1, -1, -1, -1, -1, -1);
         }
 
         return new AgeGroupDistributionDto(
@@ -425,15 +425,17 @@ public class AnalyticsService {
         }
 
         int totalVisits = 0;
+        boolean found = false;
 
         for (AnalyticsRow row : loadRows()) {
             if (row.getStartAt() == null || row.getTotalCount() == null) continue;
             if (row.getStartAt().toLocalDate().equals(date)) {
                 totalVisits += row.getTotalCount();
+                found = true;
             }
         }
 
-        return new DailyVisitCountResponseDto(totalVisits);
+        return new DailyVisitCountResponseDto(found ? totalVisits : -1);
     }
 
     // ===== VisionData 기반 데이터 빌더 =====

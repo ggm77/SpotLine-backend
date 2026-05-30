@@ -45,7 +45,7 @@ public class AnalyticsV2Service {
     public CountResponseDto getCurrentCount() {
         final int count = visionDataRepository.findTopByOrderByCapturedAtDesc()
                 .map(VisionData::getTotalCount)
-                .orElse(0);
+                .orElse(-1);
 
         return new CountResponseDto(count);
     }
@@ -66,7 +66,7 @@ public class AnalyticsV2Service {
         final int time = peakHourCounts.entrySet().stream()
                 .max(Map.Entry.comparingByValue())
                 .map(Map.Entry::getKey)
-                .orElse(0);
+                .orElse(-1);
 
         return new TimeResponseDto(time);
     }
@@ -76,7 +76,12 @@ public class AnalyticsV2Service {
     public DailySalesResponseDto getDailySales(final LocalDateTime startAt, final LocalDateTime endAt) {
         validateRange(startAt, endAt);
 
-        final int visitors = findOverlapping(startAt, endAt).stream()
+        final List<VisionData> overlapping = findOverlapping(startAt, endAt);
+        if (overlapping.isEmpty()) {
+            return new DailySalesResponseDto(-1);
+        }
+
+        final int visitors = overlapping.stream()
                 .filter(visionData -> visionData.getTotalCount() != null)
                 .mapToInt(VisionData::getTotalCount)
                 .sum();
@@ -101,12 +106,12 @@ public class AnalyticsV2Service {
                 .filter(visionData -> visionData.getMaxResponseWaitTime() != null)
                 .mapToInt(VisionData::getMaxResponseWaitTime)
                 .max()
-                .orElse(0);
+                .orElse(-1);
 
         return new TimeResponseDto(time);
     }
 
-    // 그냥 나간 손님 수 - 구간 내 justLeftCount(null 제외) 합계
+    // 그냥 나간 손님 수 - 구간 내 justLeftCount(null 제외) 합계 (데이터 없으면 -1)
     @Transactional(readOnly = true)
     public CountResponseDto getJustLeftCount(final LocalDateTime startAt, final LocalDateTime endAt) {
         validateRange(startAt, endAt);
@@ -114,7 +119,8 @@ public class AnalyticsV2Service {
         final int count = findOverlapping(startAt, endAt).stream()
                 .filter(visionData -> visionData.getJustLeftCount() != null)
                 .mapToInt(VisionData::getJustLeftCount)
-                .sum();
+                .reduce(Integer::sum)
+                .orElse(-1);
 
         return new CountResponseDto(count);
     }
@@ -128,7 +134,7 @@ public class AnalyticsV2Service {
                 .filter(visionData -> visionData.getMaxEmptyTableTime() != null)
                 .mapToInt(VisionData::getMaxEmptyTableTime)
                 .max()
-                .orElse(0);
+                .orElse(-1);
 
         return new TimeResponseDto(time);
     }
@@ -138,10 +144,13 @@ public class AnalyticsV2Service {
     public DailyCountResponseDto getDailyCount(final LocalDateTime startAt, final LocalDateTime endAt) {
         validateRange(startAt, endAt);
 
-        final int count = findOverlapping(startAt, endAt).stream()
-                .filter(visionData -> visionData.getTotalCount() != null)
-                .mapToInt(VisionData::getTotalCount)
-                .sum();
+        final List<VisionData> overlapping = findOverlapping(startAt, endAt);
+        final int count = overlapping.isEmpty()
+                ? -1
+                : overlapping.stream()
+                        .filter(visionData -> visionData.getTotalCount() != null)
+                        .mapToInt(VisionData::getTotalCount)
+                        .sum();
 
         // 전체 데이터를 일자별로 합산한 뒤 일평균 계산 (capturedAt 또는 totalCount 가 null 인 스냅샷은 제외)
         final Map<LocalDate, Integer> dailyTotals = new HashMap<>();
@@ -153,7 +162,7 @@ public class AnalyticsV2Service {
         }
 
         final int avgCount = dailyTotals.isEmpty()
-                ? 0
+                ? -1
                 : (int) Math.round(dailyTotals.values().stream().mapToInt(Integer::intValue).average().orElse(0));
 
         return new DailyCountResponseDto(count, avgCount);
@@ -210,7 +219,7 @@ public class AnalyticsV2Service {
                 .filter(visionData -> visionData.getCoreCustomerAge() != null && visionData.getCoreCustomerGender() != null)
                 .max(Comparator.comparing(VisionData::getCapturedAt))
                 .map(visionData -> new CoreCustomerV2ResponseDto(visionData.getCoreCustomerAge(), visionData.getCoreCustomerGender()))
-                .orElse(new CoreCustomerV2ResponseDto(0, 0));
+                .orElse(new CoreCustomerV2ResponseDto(-1, -1));
     }
 
     // 평균 체류시간 - 구간 내 스냅샷 avgDwellTime(분, null 제외)의 평균
@@ -222,7 +231,7 @@ public class AnalyticsV2Service {
                 .filter(visionData -> visionData.getAvgDwellTime() != null)
                 .mapToInt(VisionData::getAvgDwellTime)
                 .average()
-                .orElse(0);
+                .orElse(-1.0);
 
         return new TimeResponseDto((int) Math.round(avgMinutes));
     }
