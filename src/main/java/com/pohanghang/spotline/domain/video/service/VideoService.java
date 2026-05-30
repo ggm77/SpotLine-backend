@@ -17,7 +17,6 @@ import org.springframework.web.multipart.MultipartFile;
 
 import java.nio.file.Path;
 import java.time.LocalDateTime;
-import java.time.OffsetDateTime;
 
 @Service
 @RequiredArgsConstructor
@@ -70,7 +69,7 @@ public class VideoService {
      * 청크는 촬영 시점(createdAt)으로 정렬 가능하게 저장되며, 이후 정렬·결합해 사용한다.
      */
     public void saveStreamChunk(
-            final OffsetDateTime createdAt,
+            final LocalDateTime createdAt,
             final MultipartFile fileChunk
     ) {
         // 1) 파라미터 검사

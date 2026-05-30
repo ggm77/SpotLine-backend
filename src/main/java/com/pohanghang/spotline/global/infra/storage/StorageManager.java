@@ -11,7 +11,8 @@ import org.springframework.web.multipart.MultipartFile;
 import java.io.File;
 import java.nio.file.Path;
 import java.time.Instant;
-import java.time.OffsetDateTime;
+import java.time.LocalDateTime;
+import java.time.ZoneId;
 import java.util.UUID;
 
 /**
@@ -21,6 +22,8 @@ import java.util.UUID;
 @Component
 @RequiredArgsConstructor
 public class StorageManager {
+
+    private static final ZoneId KST = ZoneId.of("Asia/Seoul");
 
     @Value("${save-path}")
     private String SAVE_PATH;
@@ -68,7 +71,7 @@ public class StorageManager {
      */
     public Path saveStreamChunk(
             final MultipartFile multipartFile,
-            final OffsetDateTime createdAt
+            final LocalDateTime createdAt
     ) {
         // 1) null 체크
         if (multipartFile == null) {
@@ -82,7 +85,7 @@ public class StorageManager {
         final String extension = extractExtension(multipartFile.getOriginalFilename());
 
         // 3) 촬영 시점 기준 정렬이 가능하도록 epochMilli 를 접두어로 사용
-        final long epochMilli = createdAt.toInstant().toEpochMilli();
+        final long epochMilli = createdAt.atZone(KST).toInstant().toEpochMilli();
         final String name = "chunk_" + epochMilli + "_" + UUID.randomUUID()
                 + (extension.isBlank() ? "" : "." + extension);
 

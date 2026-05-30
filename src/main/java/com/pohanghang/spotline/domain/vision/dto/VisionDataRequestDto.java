@@ -1,6 +1,5 @@
 package com.pohanghang.spotline.domain.vision.dto;
 
-import java.time.OffsetDateTime;
 import java.util.List;
 
 public record VisionDataRequestDto(
@@ -13,7 +12,7 @@ public record VisionDataRequestDto(
         Integer coreCustomerGender, // 핵심 고객 성별 (1 = 남자, 2 = 여자)
         Integer avgDwellTime, // 평균 체류시간 (분)
         Integer justLeftCount, // 그냥 나간 손님 수
-        OffsetDateTime capturedAt, // 원본 데이터 촬영 시작 시점
-        OffsetDateTime endAt // 원본 데이터 끝나는 시점
+        String capturedAt, // 원본 데이터 촬영 시작 시점 ("2026-05-17T15:00:00" 또는 "...Z" 형식 모두 허용)
+        String endAt // 원본 데이터 끝나는 시점
 ) {
 }
