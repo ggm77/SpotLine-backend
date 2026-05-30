@@ -3,7 +3,7 @@ package com.pohanghang.spotline.domain.analytics.util;
 import com.pohanghang.spotline.domain.analytics.dto.PerformanceResultResponseDto;
 import com.pohanghang.spotline.domain.analytics.dto.VisitCountResponseDto;
 import com.pohanghang.spotline.domain.analytics.dto.WeatherImpactRequestDto;
-import com.pohanghang.spotline.domain.analytics.repository.AnalyticsRepository;
+import com.pohanghang.spotline.domain.analytics.model.AnalyticsRow;
 import lombok.extern.slf4j.Slf4j;
 
 import java.time.LocalDate;
@@ -21,10 +21,10 @@ public final class VisitTrendCalculator {
     public static VisitCountResponseDto calculateTrend(
             final LocalDateTime startAt,
             final LocalDateTime endAt,
-            final List<AnalyticsRepository.WeatherImpactRow> rows
+            final List<AnalyticsRow> rows
     ) {
         final SortedSet<LocalDate> allDates = new TreeSet<>();
-        for (AnalyticsRepository.WeatherImpactRow row : rows) {
+        for (AnalyticsRow row : rows) {
             if (row.getStartAt() != null) {
                 allDates.add(row.getStartAt().toLocalDate());
             }

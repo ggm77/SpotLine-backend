@@ -3,7 +3,7 @@ package com.pohanghang.spotline.domain.analytics.util;
 import com.pohanghang.spotline.domain.analytics.dto.PerformanceResultResponseDto;
 import com.pohanghang.spotline.domain.analytics.dto.WeatherImpactRequestDto;
 import com.pohanghang.spotline.domain.analytics.entity.Weather;
-import com.pohanghang.spotline.domain.analytics.repository.AnalyticsRepository;
+import com.pohanghang.spotline.domain.analytics.model.AnalyticsRow;
 import com.pohanghang.spotline.domain.video.entity.PerformanceResult;
 import com.pohanghang.spotline.global.exception.CustomException;
 import com.pohanghang.spotline.global.exception.constants.ExceptionCode;
@@ -26,7 +26,7 @@ public final class WeatherImpactCalculator {
 
     public static PerformanceResultResponseDto calculate(
             final WeatherImpactRequestDto weatherImpactRequestDto,
-            final List<AnalyticsRepository.WeatherImpactRow> weatherImpactRows
+            final List<AnalyticsRow> weatherImpactRows
     ) {
         if (weatherImpactRows.isEmpty()) {
             throw new CustomException(ExceptionCode.ANALYTICS_NOT_FOUND);
@@ -73,10 +73,10 @@ public final class WeatherImpactCalculator {
     }
 
     private static Map<LocalDate, DailyWeatherVisit> toDailyWeatherVisits(
-            final List<AnalyticsRepository.WeatherImpactRow> weatherImpactRows
+            final List<AnalyticsRow> weatherImpactRows
     ) {
         final Map<LocalDate, DailyWeatherVisit> dailyWeatherVisits = new HashMap<>();
-        for (AnalyticsRepository.WeatherImpactRow weatherImpactRow : weatherImpactRows) {
+        for (AnalyticsRow weatherImpactRow : weatherImpactRows) {
             if (weatherImpactRow.getStartAt() == null || weatherImpactRow.getTotalCount() == null) {
                 continue;
             }

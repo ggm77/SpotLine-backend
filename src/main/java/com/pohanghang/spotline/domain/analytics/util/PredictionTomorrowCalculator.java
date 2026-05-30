@@ -2,7 +2,7 @@ package com.pohanghang.spotline.domain.analytics.util;
 
 import com.pohanghang.spotline.domain.analytics.dto.PredictionTomorrowResponseDto;
 import com.pohanghang.spotline.domain.analytics.entity.Weather;
-import com.pohanghang.spotline.domain.analytics.repository.AnalyticsRepository;
+import com.pohanghang.spotline.domain.analytics.model.AnalyticsRow;
 
 import java.time.DayOfWeek;
 import java.time.LocalDate;
@@ -12,7 +12,7 @@ import java.util.*;
 public class PredictionTomorrowCalculator {
 
     public static PredictionTomorrowResponseDto calculate(
-            final List<AnalyticsRepository.WeatherImpactRow> rows,
+            final List<AnalyticsRow> rows,
             final Weather tomorrowWeather,
             final LocalDate targetDate
     ) {
@@ -20,7 +20,7 @@ public class PredictionTomorrowCalculator {
 
         // 1. Group data by Date
         Map<LocalDate, DailyStats> dailyData = new HashMap<>();
-        for (AnalyticsRepository.WeatherImpactRow row : rows) {
+        for (AnalyticsRow row : rows) {
             if (row.getStartAt() == null) continue;
             LocalDate date = row.getStartAt().toLocalDate();
             dailyData.putIfAbsent(date, new DailyStats(date, row.getWeather()));

@@ -1,5 +1,6 @@
 package com.pohanghang.spotline.domain.vision.entity;
 
+import com.pohanghang.spotline.domain.analytics.entity.Weather;
 import jakarta.persistence.*;
 import lombok.AccessLevel;
 import lombok.Builder;
@@ -50,6 +51,11 @@ public class VisionData {
     @Column(nullable = false)
     private LocalDateTime endAt; // 원본 데이터 끝나는 시점
 
+    @Enumerated(EnumType.STRING)
+    private Weather weather; // 촬영 시점 날씨 (수집 시 보정용으로 함께 저장)
+
+    private Double temperature; // 촬영 시점 기온(℃)
+
     @OneToMany(mappedBy = "visionData", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<VisionPerson> people = new ArrayList<>();
 
@@ -67,7 +73,9 @@ public class VisionData {
             final Integer avgDwellTime,
             final Integer justLeftCount,
             final LocalDateTime capturedAt,
-            final LocalDateTime endAt
+            final LocalDateTime endAt,
+            final Weather weather,
+            final Double temperature
     ) {
         this.totalCount = totalCount;
         this.peakTime = peakTime;
@@ -79,6 +87,8 @@ public class VisionData {
         this.justLeftCount = justLeftCount;
         this.capturedAt = capturedAt;
         this.endAt = endAt;
+        this.weather = weather;
+        this.temperature = temperature;
     }
 
     public void addPerson(final VisionPerson person) {

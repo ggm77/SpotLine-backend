@@ -2,7 +2,7 @@ package com.pohanghang.spotline.domain.analytics.util;
 
 import com.pohanghang.spotline.domain.analytics.dto.PerformanceResultResponseDto;
 import com.pohanghang.spotline.domain.analytics.dto.WeekdayPatternRequestDto;
-import com.pohanghang.spotline.domain.analytics.repository.AnalyticsRepository;
+import com.pohanghang.spotline.domain.analytics.model.AnalyticsRow;
 import com.pohanghang.spotline.domain.video.entity.PerformanceResult;
 import com.pohanghang.spotline.global.exception.CustomException;
 import com.pohanghang.spotline.global.exception.constants.ExceptionCode;
@@ -22,7 +22,7 @@ public final class WeekdayPatternCalculator {
 
     public static PerformanceResultResponseDto calculate(
             final WeekdayPatternRequestDto requestDto,
-            final List<AnalyticsRepository.WeatherImpactRow> rows
+            final List<AnalyticsRow> rows
     ) {
         if (rows.isEmpty()) {
             throw new CustomException(ExceptionCode.ANALYTICS_NOT_FOUND);
@@ -32,7 +32,7 @@ public final class WeekdayPatternCalculator {
         final DayOfWeek targetDayOfWeek = targetDate.getDayOfWeek();
 
         final Map<LocalDate, int[]> dailyVisitStats = new HashMap<>();
-        for (AnalyticsRepository.WeatherImpactRow row : rows) {
+        for (AnalyticsRow row : rows) {
             if (row.getStartAt() == null || row.getTotalCount() == null) {
                 continue;
             }

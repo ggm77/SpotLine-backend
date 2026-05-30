@@ -8,18 +8,8 @@ import org.springframework.web.reactive.function.client.WebClient;
 @Configuration
 public class WebClientConfig {
 
-    @Value("${yolo.url}")
-    private String YOLO_URL;
-
     @Value("${gemini.url}")
     private String GEMINI_URL;
-
-    @Bean
-    public WebClient yoloWebClient() {
-        return WebClient.builder()
-                .baseUrl(YOLO_URL)
-                .build();
-    }
 
     @Bean
     public WebClient openMeteoWebClient() {

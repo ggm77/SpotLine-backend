@@ -2,21 +2,22 @@ package com.pohanghang.spotline.domain.analytics.service;
 
 import com.pohanghang.spotline.domain.analytics.dto.*;
 import com.pohanghang.spotline.domain.analytics.entity.AgeGroup;
-import com.pohanghang.spotline.domain.analytics.entity.Analytics;
-import com.pohanghang.spotline.domain.analytics.repository.AnalyticsRepository;
+import com.pohanghang.spotline.domain.analytics.entity.Gender;
+import com.pohanghang.spotline.domain.analytics.entity.Weather;
+import com.pohanghang.spotline.domain.analytics.model.AnalyticsRow;
+import com.pohanghang.spotline.domain.analytics.model.CoreCustomerGroup;
+import com.pohanghang.spotline.domain.analytics.util.PredictionTomorrowCalculator;
+import com.pohanghang.spotline.domain.analytics.util.VisitTrendCalculator;
 import com.pohanghang.spotline.domain.analytics.util.WeatherImpactCalculator;
 import com.pohanghang.spotline.domain.analytics.util.WeekdayPatternCalculator;
-import com.pohanghang.spotline.domain.analytics.util.VisitTrendCalculator;
-import com.pohanghang.spotline.domain.analytics.util.PredictionTomorrowCalculator;
-import com.pohanghang.spotline.domain.analytics.entity.Weather;
-import com.pohanghang.spotline.global.infra.openmeteo.OpenMeteoClient;
-import com.pohanghang.spotline.domain.video.entity.Video;
 import com.pohanghang.spotline.domain.video.entity.PerformanceResult;
-import com.pohanghang.spotline.domain.video.repository.VideoRepository;
-import com.pohanghang.spotline.global.infra.gemini.GeminiClient;
+import com.pohanghang.spotline.domain.vision.entity.VisionData;
+import com.pohanghang.spotline.domain.vision.entity.VisionPerson;
+import com.pohanghang.spotline.domain.vision.repository.VisionDataRepository;
 import com.pohanghang.spotline.global.exception.CustomException;
 import com.pohanghang.spotline.global.exception.constants.ExceptionCode;
-import com.pohanghang.spotline.global.util.JsonUtil;
+import com.pohanghang.spotline.global.infra.gemini.GeminiClient;
+import com.pohanghang.spotline.global.infra.openmeteo.OpenMeteoClient;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -24,10 +25,16 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
+import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.EnumMap;
 import java.util.List;
 import java.util.Map;
 
+/**
+ * v1 통계 API. 비전 AI가 적재한 {@link VisionData} 스냅샷들을 집계한다.
+ * (과거 영상 분석(Analytics) 대신 /api/v2/vision/data 로 받은 데이터를 사용)
+ */
 @Service
 @RequiredArgsConstructor
 public class AnalyticsService {
@@ -44,66 +51,21 @@ public class AnalyticsService {
 
     private static final String SYSTEM_PROMPT = "지금부터 당신은 마케팅 전문가가 되어 사장님을 위한 마케팅/운영 제안을 전략적이게 제안합니다.\n볼드 표시를 포함한 각종 md파일을 위한 표현을 전부 제외하고, 오로지 자연어와 숫자로만 대답해.";
 
-    private final AnalyticsRepository analyticsRepository;
-    private final VideoRepository videoRepository;
+    private final VisionDataRepository visionDataRepository;
     private final OpenMeteoClient openMeteoClient;
     private final GeminiClient geminiClient;
 
-    public RawAnalyticsDto getRawAnalytics(final Long videoId) {
-        // 1) null 검사
-        if (videoId == null) {
-            throw new CustomException(ExceptionCode.INVALID_REQUEST);
-        }
-
-        // 2) video 조회
-        final Video video = videoRepository.findById(videoId)
-                .orElseThrow(() -> new CustomException(ExceptionCode.VIDEO_NOT_FOUND));
-
-        // 3) video로 analytics 조회
-        final Analytics analytics = analyticsRepository.findByVideo(video)
-                .orElseThrow(() -> new CustomException(ExceptionCode.ANALYTICS_NOT_FOUND));
-
-        // 4) Entity에서 DTO 재구성 (rawData 제거됨)
-        java.util.List<RawAnalyticsDto.Persons> personsList = new java.util.ArrayList<>();
-        for (com.pohanghang.spotline.domain.analytics.entity.AnalyticsPerson ap : analytics.getPersons()) {
-            for (int i = 0; i < ap.getCount(); i++) {
-                personsList.add(new RawAnalyticsDto.Persons(
-                        null,
-                        ap.getGender().name().toLowerCase(),
-                        AGE_GROUP_LABELS.getOrDefault(ap.getAgeGroup(), "unknown"),
-                        null, null, null, null
-                ));
-            }
-        }
-
-        return new RawAnalyticsDto(
-                new RawAnalyticsDto.Summary(
-                        analytics.getTotalCount(),
-                        analytics.getPeakCongestion().name().toLowerCase(),
-                        analytics.getAvgDwellTimeSeconds()
-                ),
-                personsList
-        );
-    }
-
     @Transactional(readOnly = true)
     public CoreCustomerResponseDto getCoreCustomers(final DefaultStartAtEndAtRequestDto defaultStartAtEndAtRequestDto) {
-        // 1) null 검사
-        if (defaultStartAtEndAtRequestDto == null
-                || defaultStartAtEndAtRequestDto.startAt() == null
-                || defaultStartAtEndAtRequestDto.endAt() == null
-                || !defaultStartAtEndAtRequestDto.startAt().isBefore(defaultStartAtEndAtRequestDto.endAt())) {
-            throw new CustomException(ExceptionCode.INVALID_REQUEST);
-        }
+        validateRange(defaultStartAtEndAtRequestDto);
 
-        final LocalDateTime startAt = defaultStartAtEndAtRequestDto.startAt();
-        final LocalDateTime endAt = defaultStartAtEndAtRequestDto.endAt();
-
-        final List<AnalyticsRepository.CoreCustomerGroup> coreCustomerGroups =
-                analyticsRepository.findCoreCustomerGroups(startAt, endAt);
+        final List<CoreCustomerGroup> coreCustomerGroups = buildCoreCustomerGroups(
+                defaultStartAtEndAtRequestDto.startAt(),
+                defaultStartAtEndAtRequestDto.endAt()
+        );
 
         return coreCustomerGroups.stream()
-                .filter(group -> group.getAgeGroup() != AgeGroup.UNKNOWN && !"UNKNOWN".equals(group.getGender().name()))
+                .filter(group -> group.getAgeGroup() != AgeGroup.UNKNOWN && group.getGender() != Gender.UNKNOWN)
                 .findFirst()
                 .map(coreCustomerGroup -> new CoreCustomerResponseDto(
                         coreCustomerGroup.getGender().name(),
@@ -114,34 +76,24 @@ public class AnalyticsService {
 
     @Transactional(readOnly = true)
     public AgeGroupDistributionDto getHourlyPopulation(final DefaultStartAtEndAtRequestDto defaultStartAtEndAtRequestDto) {
-        // 1) null 검사
-        if (defaultStartAtEndAtRequestDto == null
-                || defaultStartAtEndAtRequestDto.startAt() == null
-                || defaultStartAtEndAtRequestDto.endAt() == null
-                || !defaultStartAtEndAtRequestDto.startAt().isBefore(defaultStartAtEndAtRequestDto.endAt())) {
-            throw new CustomException(ExceptionCode.INVALID_REQUEST);
-        }
-
-        final LocalDateTime startAt = defaultStartAtEndAtRequestDto.startAt();
-        final LocalDateTime endAt = defaultStartAtEndAtRequestDto.endAt();
+        validateRange(defaultStartAtEndAtRequestDto);
 
         final Map<AgeGroup, Integer> ageGroupCounts = new EnumMap<>(AgeGroup.class);
         for (AgeGroup ageGroup : AgeGroup.values()) {
             ageGroupCounts.put(ageGroup, 0);
         }
 
-        final List<AnalyticsRepository.HourlyPopulationGroup> hourlyPopulationGroups =
-                analyticsRepository.findHourlyPopulationGroups(startAt, endAt);
+        for (VisionData visionData : findOverlapping(defaultStartAtEndAtRequestDto.startAt(), defaultStartAtEndAtRequestDto.endAt())) {
+            for (VisionPerson person : visionData.getPeople()) {
+                final AgeGroup ageGroup = toAgeGroup(person.getAge());
+                ageGroupCounts.merge(ageGroup, 1, Integer::sum);
+            }
+        }
 
         int totalCount = 0;
-        for (AnalyticsRepository.HourlyPopulationGroup hourlyPopulationGroup : hourlyPopulationGroups) {
-            int count = Math.toIntExact(hourlyPopulationGroup.getTotalCount());
-            ageGroupCounts.put(
-                    hourlyPopulationGroup.getAgeGroup(),
-                    count
-            );
-            if (hourlyPopulationGroup.getAgeGroup() != AgeGroup.UNKNOWN) {
-                totalCount += count;
+        for (Map.Entry<AgeGroup, Integer> entry : ageGroupCounts.entrySet()) {
+            if (entry.getKey() != AgeGroup.UNKNOWN) {
+                totalCount += entry.getValue();
             }
         }
 
@@ -150,12 +102,12 @@ public class AnalyticsService {
         }
 
         return new AgeGroupDistributionDto(
-                (int) Math.round((double) ageGroupCounts.get(AgeGroup.CHILD) / totalCount * 100),
-                (int) Math.round((double) ageGroupCounts.get(AgeGroup.TEN) / totalCount * 100),
-                (int) Math.round((double) ageGroupCounts.get(AgeGroup.TWENTY) / totalCount * 100),
-                (int) Math.round((double) ageGroupCounts.get(AgeGroup.THIRTY) / totalCount * 100),
-                (int) Math.round((double) ageGroupCounts.get(AgeGroup.FORTY) / totalCount * 100),
-                (int) Math.round((double) ageGroupCounts.get(AgeGroup.FIFTY_PLUS) / totalCount * 100)
+                toPercent(ageGroupCounts.get(AgeGroup.CHILD), totalCount),
+                toPercent(ageGroupCounts.get(AgeGroup.TEN), totalCount),
+                toPercent(ageGroupCounts.get(AgeGroup.TWENTY), totalCount),
+                toPercent(ageGroupCounts.get(AgeGroup.THIRTY), totalCount),
+                toPercent(ageGroupCounts.get(AgeGroup.FORTY), totalCount),
+                toPercent(ageGroupCounts.get(AgeGroup.FIFTY_PLUS), totalCount)
         );
     }
 
@@ -165,40 +117,32 @@ public class AnalyticsService {
             throw new CustomException(ExceptionCode.INVALID_REQUEST);
         }
 
-        final List<AnalyticsRepository.WeatherImpactRow> weatherImpactRows = analyticsRepository.findWeatherImpactRows();
-        return WeatherImpactCalculator.calculate(weatherImpactRequestDto, weatherImpactRows);
+        return WeatherImpactCalculator.calculate(weatherImpactRequestDto, loadRows());
     }
-    
+
     @Transactional(readOnly = true)
     public PerformanceResultResponseDto getWeekdayPatterns(final WeekdayPatternRequestDto weekdayPatternRequestDto) {
         if (weekdayPatternRequestDto == null || weekdayPatternRequestDto.day() == null) {
             throw new CustomException(ExceptionCode.INVALID_REQUEST);
         }
 
-        final List<AnalyticsRepository.WeatherImpactRow> rows = analyticsRepository.findWeatherImpactRows();
-        return WeekdayPatternCalculator.calculate(weekdayPatternRequestDto, rows);
+        return WeekdayPatternCalculator.calculate(weekdayPatternRequestDto, loadRows());
     }
 
     @Transactional(readOnly = true)
     public VisitCountResponseDto getVisitCount(final DefaultStartAtEndAtRequestDto defaultStartAtEndAtRequestDto) {
-        if (defaultStartAtEndAtRequestDto == null
-                || defaultStartAtEndAtRequestDto.startAt() == null
-                || defaultStartAtEndAtRequestDto.endAt() == null
-                || !defaultStartAtEndAtRequestDto.startAt().isBefore(defaultStartAtEndAtRequestDto.endAt())) {
-            throw new CustomException(ExceptionCode.INVALID_REQUEST);
-        }
+        validateRange(defaultStartAtEndAtRequestDto);
 
-        final List<AnalyticsRepository.WeatherImpactRow> rows = analyticsRepository.findWeatherImpactRows();
         return VisitTrendCalculator.calculateTrend(
                 defaultStartAtEndAtRequestDto.startAt(),
                 defaultStartAtEndAtRequestDto.endAt(),
-                rows
+                loadRows()
         );
     }
 
     @Transactional(readOnly = true)
     public PredictionTomorrowResponseDto getPredictionTomorrow() {
-        final List<AnalyticsRepository.WeatherImpactRow> rows = analyticsRepository.findWeatherImpactRows();
+        final List<AnalyticsRow> rows = loadRows();
 
         LocalDateTime tomorrowAfternoon = LocalDateTime.now(ZoneId.of("Asia/Seoul"))
                 .plusDays(1)
@@ -215,11 +159,11 @@ public class AnalyticsService {
 
     @Transactional(readOnly = true)
     public PredictionNextWeekResponseDto getPredictionNextWeek() {
-        final List<AnalyticsRepository.WeatherImpactRow> rows = analyticsRepository.findWeatherImpactRows();
-        List<PredictionTomorrowResponseDto> nextWeekPredictions = new java.util.ArrayList<>();
+        final List<AnalyticsRow> rows = loadRows();
+        List<PredictionTomorrowResponseDto> nextWeekPredictions = new ArrayList<>();
 
         LocalDateTime now = LocalDateTime.now(ZoneId.of("Asia/Seoul"));
-        
+
         for (int i = 1; i <= 7; i++) {
             LocalDateTime targetAfternoon = now.plusDays(i)
                     .withHour(14)
@@ -247,7 +191,7 @@ public class AnalyticsService {
         LocalDateTime yesterdayStart = yesterday.atStartOfDay();
         LocalDateTime yesterdayEnd = today.atStartOfDay();
 
-        List<AnalyticsRepository.WeatherImpactRow> rows = analyticsRepository.findWeatherImpactRows();
+        List<AnalyticsRow> rows = loadRows();
 
         int yesterdayVisitsSum = 0;
         int yesterdayVisitsCount = 0;
@@ -255,7 +199,7 @@ public class AnalyticsService {
         int lastWeekVisitsCount = 0;
         Weather yesterdayWeather = Weather.SUNNY;
 
-        for (AnalyticsRepository.WeatherImpactRow row : rows) {
+        for (AnalyticsRow row : rows) {
             if (row.getStartAt() == null || row.getTotalCount() == null) continue;
             LocalDate rowDate = row.getStartAt().toLocalDate();
             if (rowDate.equals(yesterday)) {
@@ -267,10 +211,10 @@ public class AnalyticsService {
                 lastWeekVisitsCount++;
             }
         }
-        
+
         int yesterdayVisits = yesterdayVisitsCount > 0 ? Math.round((float) yesterdayVisitsSum / yesterdayVisitsCount) : 0;
         int lastWeekVisits = lastWeekVisitsCount > 0 ? Math.round((float) lastWeekVisitsSum / lastWeekVisitsCount) : 0;
-        
+
         int diffPercent = lastWeekVisits > 0 ? (int) Math.round((double)(yesterdayVisits - lastWeekVisits) / lastWeekVisits * 100) : 0;
         String diffSign = diffPercent >= 0 ? "+" : "";
 
@@ -284,36 +228,35 @@ public class AnalyticsService {
         String zScoreDesc = zScoreResult.result() == PerformanceResult.GOOD ? "좋음" :
                 (zScoreResult.result() == PerformanceResult.BAD ? "나쁨" : "정상");
 
-        List<AnalyticsRepository.CoreCustomerGroup> coreGroups = analyticsRepository.findCoreCustomerGroups(yesterdayStart, yesterdayEnd);
+        List<CoreCustomerGroup> coreGroups = buildCoreCustomerGroups(yesterdayStart, yesterdayEnd);
         String coreCustomerStr = "데이터 없음";
         if (!coreGroups.isEmpty()) {
-            AnalyticsRepository.CoreCustomerGroup topGroup = coreGroups.get(0);
-            String genderStr = "MALE".equals(topGroup.getGender().name()) ? "남성" : ("FEMALE".equals(topGroup.getGender().name()) ? "여성" : "성별미상");
+            CoreCustomerGroup topGroup = coreGroups.get(0);
+            String genderStr = Gender.MALE == topGroup.getGender() ? "남성" : (Gender.FEMALE == topGroup.getGender() ? "여성" : "성별미상");
             String ageStr = AGE_GROUP_LABELS.getOrDefault(topGroup.getAgeGroup(), "알수없음");
             int totalYesterdayPersons = coreGroups.stream().mapToInt(g -> g.getTotalCount().intValue()).sum();
             int topPercent = totalYesterdayPersons > 0 ? (int) Math.round((double) topGroup.getTotalCount() / totalYesterdayPersons * 100) : 0;
             coreCustomerStr = String.format("%s %s %d%%", ageStr, genderStr, topPercent);
         }
 
-        List<Analytics> allAnalytics = analyticsRepository.findAll();
+        // 평균 체류시간(분) — VisionData.avgDwellTime 사용
         double yesterdayDwellSum = 0;
         int yesterdayDwellCount = 0;
         double overallDwellSum = 0;
         int overallDwellCount = 0;
-        
-        for (Analytics a : allAnalytics) {
-            if (a.getAvgDwellTimeSeconds() != null) {
-                overallDwellSum += a.getAvgDwellTimeSeconds();
-                overallDwellCount++;
-                if (!a.getStartAt().isBefore(yesterdayStart) && a.getStartAt().isBefore(yesterdayEnd)) {
-                    yesterdayDwellSum += a.getAvgDwellTimeSeconds();
-                    yesterdayDwellCount++;
-                }
+
+        for (VisionData visionData : visionDataRepository.findAll()) {
+            if (visionData.getAvgDwellTime() == null || visionData.getCapturedAt() == null) continue;
+            overallDwellSum += visionData.getAvgDwellTime();
+            overallDwellCount++;
+            if (!visionData.getCapturedAt().isBefore(yesterdayStart) && visionData.getCapturedAt().isBefore(yesterdayEnd)) {
+                yesterdayDwellSum += visionData.getAvgDwellTime();
+                yesterdayDwellCount++;
             }
         }
-        
-        int yesterdayDwellMins = yesterdayDwellCount > 0 ? (int) Math.round((yesterdayDwellSum / yesterdayDwellCount) / 60.0) : 0;
-        int overallDwellMins = overallDwellCount > 0 ? (int) Math.round((overallDwellSum / overallDwellCount) / 60.0) : 0;
+
+        int yesterdayDwellMins = yesterdayDwellCount > 0 ? (int) Math.round(yesterdayDwellSum / yesterdayDwellCount) : 0;
+        int overallDwellMins = overallDwellCount > 0 ? (int) Math.round(overallDwellSum / overallDwellCount) : 0;
         int dwellDiff = yesterdayDwellMins - overallDwellMins;
         String dwellDiffStr = dwellDiff >= 0 ? "+" + dwellDiff : String.valueOf(dwellDiff);
 
@@ -363,32 +306,32 @@ public class AnalyticsService {
     @Transactional(readOnly = true)
     public MessageResponseDto getMarketingRecommendations() {
         LocalDateTime now = LocalDateTime.now(ZoneId.of("Asia/Seoul"));
-        List<AnalyticsRepository.WeatherImpactRow> rows = analyticsRepository.findWeatherImpactRows();
+        List<AnalyticsRow> rows = loadRows();
 
         StringBuilder triggers = new StringBuilder();
 
         // [Rule 1] 특정 인구통계 감소
         LocalDateTime week0 = now.minusDays(21);
         LocalDateTime week1 = now.minusDays(42);
-        List<AnalyticsRepository.CoreCustomerGroup> recent3W = analyticsRepository.findCoreCustomerGroups(week0, now);
-        List<AnalyticsRepository.CoreCustomerGroup> prev3W = analyticsRepository.findCoreCustomerGroups(week1, week0);
+        List<CoreCustomerGroup> recent3W = buildCoreCustomerGroups(week0, now);
+        List<CoreCustomerGroup> prev3W = buildCoreCustomerGroups(week1, week0);
 
         if (!recent3W.isEmpty() && !prev3W.isEmpty()) {
-            AnalyticsRepository.CoreCustomerGroup topRecent = recent3W.get(0);
-            long totalRecent = recent3W.stream().mapToLong(AnalyticsRepository.CoreCustomerGroup::getTotalCount).sum();
-            double recentRatio = (double) topRecent.getTotalCount() / totalRecent;
+            CoreCustomerGroup topRecent = recent3W.get(0);
+            long totalRecent = recent3W.stream().mapToLong(CoreCustomerGroup::getTotalCount).sum();
+            double recentRatio = totalRecent > 0 ? (double) topRecent.getTotalCount() / totalRecent : 0;
 
-            long totalPrev = prev3W.stream().mapToLong(AnalyticsRepository.CoreCustomerGroup::getTotalCount).sum();
+            long totalPrev = prev3W.stream().mapToLong(CoreCustomerGroup::getTotalCount).sum();
             double prevRatio = 0;
-            for (AnalyticsRepository.CoreCustomerGroup g : prev3W) {
+            for (CoreCustomerGroup g : prev3W) {
                 if (g.getAgeGroup() == topRecent.getAgeGroup() && g.getGender() == topRecent.getGender()) {
-                    prevRatio = (double) g.getTotalCount() / totalPrev;
+                    prevRatio = totalPrev > 0 ? (double) g.getTotalCount() / totalPrev : 0;
                     break;
                 }
             }
 
             if (prevRatio - recentRatio > 0.05) {
-                String genderStr = "MALE".equals(topRecent.getGender().name()) ? "남성" : ("FEMALE".equals(topRecent.getGender().name()) ? "여성" : "성별미상");
+                String genderStr = Gender.MALE == topRecent.getGender() ? "남성" : (Gender.FEMALE == topRecent.getGender() ? "여성" : "성별미상");
                 String ageStr = AGE_GROUP_LABELS.getOrDefault(topRecent.getAgeGroup(), "알수없음");
                 triggers.append(String.format("- %s %s 방문 3주 연속 감소 (-%d%%p). 개선을 위한 마케팅 제안 1줄\n", ageStr, genderStr, (int)((prevRatio - recentRatio) * 100)));
             }
@@ -396,9 +339,9 @@ public class AnalyticsService {
 
         // [Rule 2] 만성 한산 시간대
         LocalDateTime fourWeeksAgo = now.minusDays(28);
-        java.util.Map<String, Integer> timeSlotCounts = new java.util.HashMap<>();
+        Map<String, Integer> timeSlotCounts = new java.util.HashMap<>();
         int totalVisits4W = 0;
-        for (AnalyticsRepository.WeatherImpactRow row : rows) {
+        for (AnalyticsRow row : rows) {
             if (row.getStartAt() == null || row.getStartAt().isBefore(fourWeeksAgo) || row.getTotalCount() == null) continue;
             java.time.DayOfWeek dow = row.getStartAt().getDayOfWeek();
             int hour = row.getStartAt().getHour();
@@ -417,10 +360,10 @@ public class AnalyticsService {
             }
             totalVisits4W += row.getTotalCount();
         }
-        
+
         if (!timeSlotCounts.isEmpty()) {
             double avgPerSlot = (double) totalVisits4W / (7 * 3);
-            for (java.util.Map.Entry<String, Integer> entry : timeSlotCounts.entrySet()) {
+            for (Map.Entry<String, Integer> entry : timeSlotCounts.entrySet()) {
                 if (entry.getValue() < avgPerSlot * 0.5) {
                     triggers.append(String.format("- %s 방문이 평균의 %d%%. 해당 시간대 매출 개선 제안 1줄\n", entry.getKey(), (int)(entry.getValue() / avgPerSlot * 100)));
                     break;
@@ -481,12 +424,10 @@ public class AnalyticsService {
             throw new CustomException(ExceptionCode.INVALID_REQUEST);
         }
 
-        List<AnalyticsRepository.WeatherImpactRow> rows = analyticsRepository.findWeatherImpactRows();
-
         int visitSum = 0;
         int visitCount = 0;
 
-        for (AnalyticsRepository.WeatherImpactRow row : rows) {
+        for (AnalyticsRow row : loadRows()) {
             if (row.getStartAt() == null || row.getTotalCount() == null) continue;
             if (row.getStartAt().toLocalDate().equals(date)) {
                 visitSum += row.getTotalCount();
@@ -496,5 +437,85 @@ public class AnalyticsService {
 
         int dailyVisits = visitCount > 0 ? Math.round((float) visitSum / visitCount) : 0;
         return new DailyVisitCountResponseDto(dailyVisits);
+    }
+
+    // ===== VisionData 기반 데이터 빌더 =====
+
+    /** 모든 비전 스냅샷을 통계 계산기 입력(AnalyticsRow)으로 변환한다. */
+    private List<AnalyticsRow> loadRows() {
+        final List<AnalyticsRow> rows = new ArrayList<>();
+        for (VisionData visionData : visionDataRepository.findAll()) {
+            rows.add(new AnalyticsRow(
+                    visionData.getCapturedAt(),
+                    visionData.getTotalCount(),
+                    visionData.getWeather(),
+                    visionData.getTemperature()
+            ));
+        }
+        return rows;
+    }
+
+    /** 구간 내 방문자들을 (성별, 나이대)별로 집계해 방문자 수 내림차순으로 반환한다. */
+    private List<CoreCustomerGroup> buildCoreCustomerGroups(final LocalDateTime startAt, final LocalDateTime endAt) {
+        final Map<Gender, Map<AgeGroup, Long>> counts = new EnumMap<>(Gender.class);
+        for (VisionData visionData : findOverlapping(startAt, endAt)) {
+            for (VisionPerson person : visionData.getPeople()) {
+                final Gender gender = toGender(person.getGender());
+                final AgeGroup ageGroup = toAgeGroup(person.getAge());
+                counts.computeIfAbsent(gender, g -> new EnumMap<>(AgeGroup.class))
+                        .merge(ageGroup, 1L, Long::sum);
+            }
+        }
+
+        final List<CoreCustomerGroup> groups = new ArrayList<>();
+        for (Map.Entry<Gender, Map<AgeGroup, Long>> genderEntry : counts.entrySet()) {
+            for (Map.Entry<AgeGroup, Long> ageEntry : genderEntry.getValue().entrySet()) {
+                groups.add(new CoreCustomerGroup(genderEntry.getKey(), ageEntry.getKey(), ageEntry.getValue()));
+            }
+        }
+        groups.sort(Comparator.comparingLong(CoreCustomerGroup::getTotalCount).reversed());
+        return groups;
+    }
+
+    private List<VisionData> findOverlapping(final LocalDateTime startAt, final LocalDateTime endAt) {
+        return visionDataRepository.findOverlapping(startAt, endAt);
+    }
+
+    private void validateRange(final DefaultStartAtEndAtRequestDto requestDto) {
+        if (requestDto == null
+                || requestDto.startAt() == null
+                || requestDto.endAt() == null
+                || !requestDto.startAt().isBefore(requestDto.endAt())) {
+            throw new CustomException(ExceptionCode.INVALID_REQUEST);
+        }
+    }
+
+    private int toPercent(final Integer count, final int total) {
+        return (int) Math.round((double) (count == null ? 0 : count) / total * 100);
+    }
+
+    private Gender toGender(final Integer gender) {
+        if (gender == null) {
+            return Gender.UNKNOWN;
+        }
+        return switch (gender) {
+            case 1 -> Gender.MALE;
+            case 2 -> Gender.FEMALE;
+            default -> Gender.UNKNOWN;
+        };
+    }
+
+    private AgeGroup toAgeGroup(final Integer age) {
+        if (age == null || age < 0) {
+            return AgeGroup.UNKNOWN;
+        }
+        return switch (age / 10) {
+            case 0 -> AgeGroup.CHILD;
+            case 1 -> AgeGroup.TEN;
+            case 2 -> AgeGroup.TWENTY;
+            case 3 -> AgeGroup.THIRTY;
+            case 4 -> AgeGroup.FORTY;
+            default -> AgeGroup.FIFTY_PLUS;
+        };
     }
 }

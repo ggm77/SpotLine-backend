@@ -17,13 +17,6 @@ public class AnalyticsController {
 
     private final AnalyticsService analyticsService;
 
-    @GetMapping("/analytics/raw")
-    public ResponseEntity<RawAnalyticsDto> getRawAnalytics(
-            @RequestParam(value = "videoId") final Long videoId) {
-
-        return ResponseEntity.ok(analyticsService.getRawAnalytics(videoId));
-    }
-
     @GetMapping("/analytics/core-customers")
     public ResponseEntity<CoreCustomerResponseDto> getCoreCustomers(
             @RequestParam("startAt") @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) final LocalDateTime startAt,
