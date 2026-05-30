@@ -2,8 +2,6 @@ package com.pohanghang.spotline.global.infra.storage;
 
 import com.pohanghang.spotline.global.exception.CustomException;
 import com.pohanghang.spotline.global.exception.constants.ExceptionCode;
-import org.springframework.core.io.FileSystemResource;
-import org.springframework.core.io.Resource;
 import org.springframework.stereotype.Component;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -49,39 +47,5 @@ public class StorageIoCore {
                 throw new CustomException(ExceptionCode.FILE_WRITE_ERROR, ex);
             }
         }
-    }
-
-    /**
-     * 파일 이동하는 메서드
-     * @param source 이동할 파일 경로
-     * @param target 파일명이 포함된 목표 경로
-     */
-    public void move(
-            final Path source,
-            final Path target
-    ) {
-        try {
-            Files.move(source, target);
-        } catch (final FileAlreadyExistsException ex) {
-            throw new CustomException(ExceptionCode.FILE_ALREADY_EXIST);
-        } catch (final IOException ex) {
-            throw new CustomException(ExceptionCode.FILE_WRITE_ERROR, ex);
-        }
-    }
-
-    /**
-     * 파일을 Resource의 형태로 읽어오는 메서드
-     * @param path 파일의 절대 경로
-     * @return Resource
-     */
-    public Resource readFileAsResource(final Path path) {
-
-        // 1) 파일 존재하는지 확인
-        if (Files.notExists(path)) {
-            throw new CustomException(ExceptionCode.FILE_NOT_EXIST);
-        }
-
-        // 2) 파일 Resource로
-        return new FileSystemResource(path);
     }
 }

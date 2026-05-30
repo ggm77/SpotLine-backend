@@ -187,7 +187,7 @@ public class AnalyticsV2Service {
     public CoreCustomerV2ResponseDto getCoreCustomer(final LocalDateTime startAt, final LocalDateTime endAt) {
         validateRange(startAt, endAt);
 
-        final List<VisionData> inRange = findOverlapping(startAt, endAt);
+        final List<VisionData> inRange = visionDataRepository.findOverlappingWithPeople(startAt, endAt);
 
         final Map<List<Integer>, Long> buckets = new HashMap<>();
         for (VisionData visionData : inRange) {

@@ -83,7 +83,7 @@ public class AnalyticsService {
             ageGroupCounts.put(ageGroup, 0);
         }
 
-        for (VisionData visionData : findOverlapping(defaultStartAtEndAtRequestDto.startAt(), defaultStartAtEndAtRequestDto.endAt())) {
+        for (VisionData visionData : visionDataRepository.findOverlappingWithPeople(defaultStartAtEndAtRequestDto.startAt(), defaultStartAtEndAtRequestDto.endAt())) {
             for (VisionPerson person : visionData.getPeople()) {
                 final AgeGroup ageGroup = toAgeGroup(person.getAge());
                 ageGroupCounts.merge(ageGroup, 1, Integer::sum);
@@ -424,19 +424,16 @@ public class AnalyticsService {
             throw new CustomException(ExceptionCode.INVALID_REQUEST);
         }
 
-        int visitSum = 0;
-        int visitCount = 0;
+        int totalVisits = 0;
 
         for (AnalyticsRow row : loadRows()) {
             if (row.getStartAt() == null || row.getTotalCount() == null) continue;
             if (row.getStartAt().toLocalDate().equals(date)) {
-                visitSum += row.getTotalCount();
-                visitCount++;
+                totalVisits += row.getTotalCount();
             }
         }
 
-        int dailyVisits = visitCount > 0 ? Math.round((float) visitSum / visitCount) : 0;
-        return new DailyVisitCountResponseDto(dailyVisits);
+        return new DailyVisitCountResponseDto(totalVisits);
     }
 
     // ===== VisionData 기반 데이터 빌더 =====
@@ -458,7 +455,7 @@ public class AnalyticsService {
     /** 구간 내 방문자들을 (성별, 나이대)별로 집계해 방문자 수 내림차순으로 반환한다. */
     private List<CoreCustomerGroup> buildCoreCustomerGroups(final LocalDateTime startAt, final LocalDateTime endAt) {
         final Map<Gender, Map<AgeGroup, Long>> counts = new EnumMap<>(Gender.class);
-        for (VisionData visionData : findOverlapping(startAt, endAt)) {
+        for (VisionData visionData : visionDataRepository.findOverlappingWithPeople(startAt, endAt)) {
             for (VisionPerson person : visionData.getPeople()) {
                 final Gender gender = toGender(person.getGender());
                 final AgeGroup ageGroup = toAgeGroup(person.getAge());
@@ -475,10 +472,6 @@ public class AnalyticsService {
         }
         groups.sort(Comparator.comparingLong(CoreCustomerGroup::getTotalCount).reversed());
         return groups;
-    }
-
-    private List<VisionData> findOverlapping(final LocalDateTime startAt, final LocalDateTime endAt) {
-        return visionDataRepository.findOverlapping(startAt, endAt);
     }
 
     private void validateRange(final DefaultStartAtEndAtRequestDto requestDto) {

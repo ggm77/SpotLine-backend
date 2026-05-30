@@ -146,14 +146,6 @@ public final class WeatherImpactCalculator {
         throw new CustomException(ExceptionCode.ANALYTICS_NOT_FOUND);
     }
 
-    private static int toRainValue(final Integer rain) {
-        if (rain > 0) {
-            return 1;
-        }
-
-        return 0;
-    }
-
     private static double[] estimateWeatherImpactCoefficients(final List<WeatherImpactObservation> observations) {
         final double[][] xtx = new double[WEATHER_MODEL_FEATURE_COUNT][WEATHER_MODEL_FEATURE_COUNT];
         final double[] xty = new double[WEATHER_MODEL_FEATURE_COUNT];

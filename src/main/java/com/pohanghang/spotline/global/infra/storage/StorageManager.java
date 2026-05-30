@@ -4,13 +4,10 @@ import com.pohanghang.spotline.global.exception.CustomException;
 import com.pohanghang.spotline.global.exception.constants.ExceptionCode;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.core.io.Resource;
 import org.springframework.stereotype.Component;
 import org.springframework.web.multipart.MultipartFile;
 
-import java.io.File;
 import java.nio.file.Path;
-import java.time.Instant;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.util.UUID;
@@ -29,37 +26,6 @@ public class StorageManager {
     private String SAVE_PATH;
 
     private final StorageIoCore storageIoCore;
-
-    /**
-     * 업로드 된 파일을 임시 폴더에 저장하는 메서드
-     * @param multipartFile 업로드 된 파일
-     * @return 임시 폴더에 저장된 파일의 절대 경로
-     */
-    public Path save(final MultipartFile multipartFile) {
-        // 1) null 체크
-        if (multipartFile == null) {
-            throw new CustomException(ExceptionCode.INVALID_FILE);
-        }
-
-        // 2) 이름 추출
-        final String rawFileName = multipartFile.getOriginalFilename();
-
-        // 3) 파일명 검사
-        if (rawFileName == null || rawFileName.isBlank()) {
-            throw new CustomException(ExceptionCode.INVALID_FILE);
-        }
-
-        // 4) 파일명 재 지정
-        final String name = UUID.randomUUID() + "." + extractExtension(rawFileName);
-
-        // 5) 저장할 경로 생성
-        final Path path = toPath(SAVE_PATH, name);
-
-        // 6) 임시 폴더에 저장
-        storageIoCore.write(multipartFile, path);
-
-        return path;
-    }
 
     /**
      * 스트리밍으로 들어온 영상 청크를 저장하는 메서드.
@@ -96,32 +62,6 @@ public class StorageManager {
         storageIoCore.write(multipartFile, path);
 
         return path;
-    }
-
-    /**
-     * 파일을 조회해서 Resource로 가져오는 메서드
-     * @param fileName 파일의 이름
-     * @return Resource 객체
-     */
-    public Resource getFile(final String fileName) {
-        // 1) null 검사
-        if (fileName == null || fileName.isBlank()) {
-            throw new CustomException(ExceptionCode.INVALID_FILE);
-        }
-
-        // 2) 경로로 변환
-        final Path path = toPath(SAVE_PATH, fileName);
-
-        // 3) 파일 읽어와서 리턴
-        return storageIoCore.readFileAsResource(path);
-    }
-
-    public Path getPath(final String fileName) {
-        if (fileName == null || fileName.isBlank()) {
-            throw new CustomException(ExceptionCode.INVALID_FILE);
-        }
-
-        return toPath(SAVE_PATH, fileName);
     }
 
     private Path toPath(

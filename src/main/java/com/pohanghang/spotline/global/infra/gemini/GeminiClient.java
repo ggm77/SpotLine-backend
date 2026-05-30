@@ -9,6 +9,9 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.MediaType;
 import org.springframework.stereotype.Component;
 import org.springframework.web.reactive.function.client.WebClient;
+import reactor.util.retry.Retry;
+
+import java.time.Duration;
 
 @Component
 public class GeminiClient {
@@ -38,6 +41,8 @@ public class GeminiClient {
                 .bodyValue(requestDto)
                 .retrieve()
                 .bodyToMono(GeminiResponseDto.class)
+                .timeout(Duration.ofSeconds(30))
+                .retryWhen(Retry.backoff(2, Duration.ofSeconds(1)))
                 .block();
 
         if (response == null) {
