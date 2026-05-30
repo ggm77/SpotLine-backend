@@ -13,7 +13,7 @@ import java.time.LocalDateTime;
 @RequiredArgsConstructor
 @RequestMapping("/api/v1")
 @RestController
-public class AnalyticsController {
+public class  AnalyticsController {
 
     private final AnalyticsService analyticsService;
 
@@ -48,14 +48,6 @@ public class AnalyticsController {
 
         return ResponseEntity.ok(analyticsService.getWeekdayPatterns(
                 new WeekdayPatternRequestDto(startAt, startAt.getDayOfWeek().getValue())));
-    }
-
-    @GetMapping("/analytics/visits/count")
-    public ResponseEntity<VisitCountResponseDto> getVisitCount(
-            @RequestParam("startAt") @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) final LocalDateTime startAt,
-            @RequestParam("endAt") @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) final LocalDateTime endAt) {
-
-        return ResponseEntity.ok(analyticsService.getVisitCount(new DefaultStartAtEndAtRequestDto(startAt, endAt)));
     }
 
     @GetMapping("/analytics/predictions/tomorrow")
