@@ -40,13 +40,11 @@ public class AnalyticsV2Service {
 
     private final VisionDataRepository visionDataRepository;
 
-    // 지금 몇 명 있나 - 가장 최근 스냅샷에서 아직 나가지 않은(outAt == null) 사람 수
+    // 지금 몇 명 있나 - 가장 최근 스냅샷의 totalCount
     @Transactional(readOnly = true)
     public CountResponseDto getCurrentCount() {
         final int count = visionDataRepository.findTopByOrderByCapturedAtDesc()
-                .map(visionData -> (int) visionData.getPeople().stream()
-                        .filter(person -> person.getOutAt() == null)
-                        .count())
+                .map(VisionData::getTotalCount)
                 .orElse(0);
 
         return new CountResponseDto(count);
