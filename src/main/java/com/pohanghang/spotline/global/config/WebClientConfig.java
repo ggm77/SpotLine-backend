@@ -22,6 +22,13 @@ public class WebClientConfig {
     }
 
     @Bean
+    public WebClient openMeteoWebClient() {
+        return WebClient.builder()
+                .baseUrl("https://api.open-meteo.com")
+                .build();
+    }
+
+    @Bean
     public WebClient geminiWebClient() {
         return WebClient.builder()
                 .baseUrl(GEMINI_URL)
