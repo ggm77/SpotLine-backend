@@ -62,17 +62,34 @@ public class AnalyticsService {
     public CoreCustomerResponseDto getCoreCustomers(final DefaultStartAtEndAtRequestDto defaultStartAtEndAtRequestDto) {
         validateRange(defaultStartAtEndAtRequestDto);
 
+        // 1차: VisionPerson 개별 데이터에서 집계
         final List<CoreCustomerGroup> coreCustomerGroups = buildCoreCustomerGroups(
                 defaultStartAtEndAtRequestDto.startAt(),
                 defaultStartAtEndAtRequestDto.endAt()
         );
 
-        return coreCustomerGroups.stream()
+        final CoreCustomerGroup topGroup = coreCustomerGroups.stream()
                 .filter(group -> group.getAgeGroup() != AgeGroup.UNKNOWN && group.getGender() != Gender.UNKNOWN)
                 .findFirst()
-                .map(coreCustomerGroup -> new CoreCustomerResponseDto(
-                        coreCustomerGroup.getGender().name(),
-                        AGE_GROUP_LABELS.get(coreCustomerGroup.getAgeGroup())
+                .orElse(null);
+
+        if (topGroup != null) {
+            return new CoreCustomerResponseDto(
+                    topGroup.getGender().name(),
+                    AGE_GROUP_LABELS.get(topGroup.getAgeGroup())
+            );
+        }
+
+        // 2차: VisionData 스냅샷 집계 필드(coreCustomerGender/Age)로 폴백
+        return visionDataRepository.findOverlapping(
+                        defaultStartAtEndAtRequestDto.startAt(),
+                        defaultStartAtEndAtRequestDto.endAt())
+                .stream()
+                .filter(v -> v.getCoreCustomerGender() != null && v.getCoreCustomerAge() != null)
+                .max(Comparator.comparing(VisionData::getCapturedAt))
+                .map(v -> new CoreCustomerResponseDto(
+                        toGender(v.getCoreCustomerGender()).name(),
+                        AGE_GROUP_LABELS.getOrDefault(toAgeGroup(v.getCoreCustomerAge()), "알수없음")
                 ))
                 .orElseThrow(() -> new CustomException(ExceptionCode.ANALYTICS_NOT_FOUND));
     }
