@@ -4,6 +4,8 @@ import com.pohanghang.spotline.domain.analytics.dto.*;
 import com.pohanghang.spotline.domain.analytics.entity.AgeGroup;
 import com.pohanghang.spotline.domain.analytics.entity.Gender;
 import com.pohanghang.spotline.domain.analytics.entity.Weather;
+import com.pohanghang.spotline.domain.store.entity.Store;
+import com.pohanghang.spotline.domain.store.service.StoreService;
 import com.pohanghang.spotline.domain.analytics.model.AnalyticsRow;
 import com.pohanghang.spotline.domain.analytics.model.CoreCustomerGroup;
 import com.pohanghang.spotline.domain.analytics.util.PredictionTomorrowCalculator;
@@ -49,11 +51,12 @@ public class AnalyticsService {
             AgeGroup.UNKNOWN, "UNKNOWN"
     );
 
-    private static final String SYSTEM_PROMPT = "지금부터 당신은 마케팅 전문가가 되어 사장님을 위한 마케팅/운영 제안을 전략적이게 제안합니다.\n볼드 표시를 포함한 각종 md파일을 위한 표현을 전부 제외하고, 오로지 자연어와 숫자로만 대답해.";
+    private static final String SYSTEM_PROMPT = "지금부터 당신은 마케팅 전문가가 되어 사장님을 위한 마케팅/운영 제안을 전략적이게 제안합니다.\n볼드 표시를 포함한 각종 md파일을 위한 표현을 전부 제외하고, 오로지 자연어와 숫자로만 대답해.\n";
 
     private final VisionDataRepository visionDataRepository;
     private final OpenMeteoClient openMeteoClient;
     private final GeminiClient geminiClient;
+    private final StoreService storeService;
 
     @Transactional(readOnly = true)
     public CoreCustomerResponseDto getCoreCustomers(final DefaultStartAtEndAtRequestDto defaultStartAtEndAtRequestDto) {
@@ -284,8 +287,13 @@ public class AnalyticsService {
             todayPrediction = new PredictionTomorrowResponseDto(yesterdayVisits, yesterdayVisits, yesterdayVisits);
         }
 
+        Store store = storeService.getDefaultStore();
+        String storeContext = store != null
+                ? String.format("가게명: %s, 업종: %s\n", store.getStoreName(), store.getBusinessType())
+                : "";
+
         String prompt = String.format(
-                SYSTEM_PROMPT +
+                SYSTEM_PROMPT + storeContext +
                 "어제 방문 %d명 (%s%d%%, z=%s, %s).\n" +
                 "핵심 고객 %s.\n" +
                 "평균 체류 %d분 (평소%s분).\n" +
@@ -409,7 +417,12 @@ public class AnalyticsService {
             triggers.append("- 현재 특별한 하락세나 이상 신호가 없습니다. 꾸준한 성장을 위한 일반적인 마케팅 아이디어 1줄 제안해줘.\n");
         }
 
-        String prompt = SYSTEM_PROMPT +
+        Store store = storeService.getDefaultStore();
+        String storeContext = store != null
+                ? String.format("가게명: %s, 업종: %s\n", store.getStoreName(), store.getBusinessType())
+                : "";
+
+        String prompt = SYSTEM_PROMPT + storeContext +
                 "다음 상황(트리거)들을 분석하여 사장님을 위한 마케팅/운영 제안을 작성해줘.\n" +
                 "각 제안은 💡 기호로 시작하고, 상황 설명 후 행동 제안을 2~3줄로 해줘.\n\n" +
                 "상황:\n" + triggers.toString();

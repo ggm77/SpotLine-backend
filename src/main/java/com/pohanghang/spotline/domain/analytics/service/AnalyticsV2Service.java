@@ -7,6 +7,7 @@ import com.pohanghang.spotline.domain.analytics.dto.DailySalesResponseDto;
 import com.pohanghang.spotline.domain.analytics.dto.MenuResponseDto;
 import com.pohanghang.spotline.domain.analytics.dto.TimeResponseDto;
 import com.pohanghang.spotline.domain.analytics.dto.VisitTrendResponseDto;
+import com.pohanghang.spotline.domain.pos.client.TossPosClient;
 import com.pohanghang.spotline.domain.vision.entity.VisionData;
 import com.pohanghang.spotline.domain.vision.entity.VisionPerson;
 import com.pohanghang.spotline.domain.vision.repository.VisionDataRepository;
@@ -34,11 +35,8 @@ import java.util.Map;
 @RequiredArgsConstructor
 public class AnalyticsV2Service {
 
-    // POS(토스) 연동 전까지 사용하는 임시 값
-    private static final int ESTIMATED_SPEND_PER_VISITOR = 12000; // 방문자 1명당 추정 객단가 (원)
-    private static final String DEFAULT_BEST_MENU = "아메리카노"; // 임시 인기 메뉴
-
     private final VisionDataRepository visionDataRepository;
+    private final TossPosClient tossPosClient;
 
     // 지금 몇 명 있나 - 가장 최근 스냅샷의 totalCount
     @Transactional(readOnly = true)
@@ -71,30 +69,16 @@ public class AnalyticsV2Service {
         return new TimeResponseDto(time);
     }
 
-    // 오늘 매출 얼마인가 - POS 연동 전까지 방문자 수(null 제외) 기반 추정 매출
-    @Transactional(readOnly = true)
+    // 오늘 매출 얼마인가 - 토스 POS API 연동
     public DailySalesResponseDto getDailySales(final LocalDateTime startAt, final LocalDateTime endAt) {
         validateRange(startAt, endAt);
-
-        final List<VisionData> overlapping = findOverlapping(startAt, endAt);
-        if (overlapping.isEmpty()) {
-            return new DailySalesResponseDto(-1);
-        }
-
-        final int visitors = overlapping.stream()
-                .filter(visionData -> visionData.getTotalCount() != null)
-                .mapToInt(VisionData::getTotalCount)
-                .sum();
-
-        return new DailySalesResponseDto(visitors * ESTIMATED_SPEND_PER_VISITOR);
+        return new DailySalesResponseDto(tossPosClient.getTotalSales(startAt, endAt));
     }
 
-    // 어떤 메뉴가 잘 팔리나 - POS 연동 전까지 임시 값
-    @Transactional(readOnly = true)
+    // 어떤 메뉴가 잘 팔리나 - 토스 POS API 연동
     public MenuResponseDto getBestMenu(final LocalDateTime startAt, final LocalDateTime endAt) {
         validateRange(startAt, endAt);
-
-        return new MenuResponseDto(DEFAULT_BEST_MENU);
+        return new MenuResponseDto(tossPosClient.getBestMenuName(startAt, endAt));
     }
 
     // 최대 응대 대기 시간 - 구간 내 maxResponseWaitTime(null 제외)의 최댓값
