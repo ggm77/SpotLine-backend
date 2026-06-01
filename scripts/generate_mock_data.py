@@ -106,17 +106,18 @@ def make_snapshot(day: datetime, hour: int, weather_name: str, temperature: floa
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--host", default="http://localhost:8080", help="서버 주소")
-    parser.add_argument("--days", type=int, default=30, help="생성할 일수 (기본 30)")
     parser.add_argument("--dry-run", action="store_true", help="실제 요청 없이 JSON만 출력")
     args = parser.parse_args()
 
-    url     = f"{args.host}/api/v2/vision/data"
-    today   = datetime.now().replace(hour=0, minute=0, second=0, microsecond=0)
-    success = 0
-    failed  = 0
+    url       = f"{args.host}/api/v2/vision/data"
+    start_day = datetime(2026, 4, 1)
+    end_day   = datetime(2026, 6, 5)
+    success   = 0
+    failed    = 0
 
-    for day_offset in range(args.days, 0, -1):
-        day          = today - timedelta(days=day_offset)
+    total_days = (end_day - start_day).days + 1
+    for day_offset in range(total_days):
+        day          = start_day + timedelta(days=day_offset)
         is_weekend   = day.weekday() >= 5
         weather_name, temp_range, rain_factor = random.choices(WEATHERS, weights=WEATHER_WEIGHTS)[0]
         temperature  = round(random.uniform(*temp_range), 1)
