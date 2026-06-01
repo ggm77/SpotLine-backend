@@ -24,11 +24,7 @@ public class PythonPredictionClient {
     @Value("${prediction.script-path:spotline_model.py}")
     private String scriptPath;
 
-    private final ObjectMapper objectMapper;
-
-    public PythonPredictionClient(ObjectMapper objectMapper) {
-        this.objectMapper = objectMapper;
-    }
+    private final ObjectMapper objectMapper = new ObjectMapper();
 
     public List<PredictionTomorrowResponseDto> predict(
             List<AnalyticsRow> rows,
