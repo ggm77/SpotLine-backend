@@ -2,6 +2,8 @@ package com.pohanghang.spotline.domain.store.dto;
 
 public record StoreRequestDto(
         String storeName,
-        String businessType
+        String businessType,
+        Double latitude,
+        Double longitude
 ) {
 }

@@ -29,9 +29,11 @@ public class StoreService {
             store = storeRepository.save(Store.builder()
                     .storeName(request.storeName())
                     .businessType(request.businessType())
+                    .latitude(request.latitude())
+                    .longitude(request.longitude())
                     .build());
         } else {
-            store.update(request.storeName(), request.businessType());
+            store.update(request.storeName(), request.businessType(), request.latitude(), request.longitude());
         }
 
         return StoreResponseDto.from(store);

@@ -154,7 +154,7 @@ public class AnalyticsService {
                 .withSecond(0)
                 .withNano(0);
 
-        OpenMeteoClient.WeatherData weatherData = openMeteoClient.getSeoulWeatherData(tomorrowAfternoon);
+        OpenMeteoClient.WeatherData weatherData = getWeatherData(tomorrowAfternoon);
         Weather tomorrowWeather = weatherData.weather();
 
         return PredictionTomorrowCalculator.calculate(rows, tomorrowWeather, tomorrowAfternoon.toLocalDate());
@@ -174,7 +174,7 @@ public class AnalyticsService {
                     .withSecond(0)
                     .withNano(0);
 
-            OpenMeteoClient.WeatherData weatherData = openMeteoClient.getSeoulWeatherData(targetAfternoon);
+            OpenMeteoClient.WeatherData weatherData = getWeatherData(targetAfternoon);
             Weather targetWeather = weatherData.weather();
 
             PredictionTomorrowResponseDto prediction = PredictionTomorrowCalculator.calculate(
@@ -279,7 +279,7 @@ public class AnalyticsService {
         String todayWeatherStr = "알수없음";
         try {
             LocalDateTime todayAfternoon = now.withHour(14).withMinute(0).withSecond(0).withNano(0);
-            OpenMeteoClient.WeatherData todayWeather = openMeteoClient.getSeoulWeatherData(todayAfternoon);
+            OpenMeteoClient.WeatherData todayWeather = getWeatherData(todayAfternoon);
             Weather twW = todayWeather.weather();
             todayWeatherStr = twW == Weather.SUNNY ? "맑음" : (twW == Weather.CLOUDY ? "흐림" : (twW == Weather.RAINY ? "비" : "눈"));
             todayPrediction = PredictionTomorrowCalculator.calculate(rows, twW, today);
@@ -402,7 +402,7 @@ public class AnalyticsService {
 
         // [Rule 4] 고날씨 민감도 + 우천 예보
         try {
-            OpenMeteoClient.WeatherData tomorrowWeather = openMeteoClient.getSeoulWeatherData(now.plusDays(1).withHour(14).withMinute(0).withSecond(0).withNano(0));
+            OpenMeteoClient.WeatherData tomorrowWeather = getWeatherData(now.plusDays(1).withHour(14).withMinute(0).withSecond(0).withNano(0));
             if (tomorrowWeather.weather() == Weather.RAINY || tomorrowWeather.weather() == Weather.SNOW) {
                 PerformanceResultResponseDto impact = WeatherImpactCalculator.calculate(new WeatherImpactRequestDto(now.minusDays(1).toLocalDate().atStartOfDay()), rows);
                 if (impact.adjustedValue() > 0 && impact.expectValue() > 0 && impact.realValue() / impact.expectValue() < 0.75) {
@@ -525,5 +525,13 @@ public class AnalyticsService {
             case 4 -> AgeGroup.FORTY;
             default -> AgeGroup.FIFTY_PLUS;
         };
+    }
+
+    private OpenMeteoClient.WeatherData getWeatherData(final LocalDateTime targetAt) {
+        Store store = storeService.getDefaultStore();
+        if (store != null && store.getLatitude() != null && store.getLongitude() != null) {
+            return openMeteoClient.getWeatherData(store.getLatitude(), store.getLongitude(), targetAt);
+        }
+        return openMeteoClient.getSeoulWeatherData(targetAt);
     }
 }
