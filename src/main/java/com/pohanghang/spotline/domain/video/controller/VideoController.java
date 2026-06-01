@@ -23,7 +23,7 @@ public class VideoController {
             @RequestPart(value = "fileChunk") final MultipartFile fileChunk
     ) {
 
-        videoService.saveStreamChunk(createdAt, fileChunk);
+        videoService.relayStreamChunk(createdAt, fileChunk);
 
         return ResponseEntity.noContent().build();
     }

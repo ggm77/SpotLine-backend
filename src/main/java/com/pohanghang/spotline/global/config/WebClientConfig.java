@@ -14,6 +14,9 @@ public class WebClientConfig {
     @Value("${toss-pos.base-url}")
     private String TOSS_POS_BASE_URL;
 
+    @Value("${relay.base-url}")
+    private String RELAY_BASE_URL;
+
     @Bean
     public WebClient openMeteoWebClient() {
         return WebClient.builder()
@@ -32,6 +35,13 @@ public class WebClientConfig {
     public WebClient tossPosWebClient() {
         return WebClient.builder()
                 .baseUrl(TOSS_POS_BASE_URL)
+                .build();
+    }
+
+    @Bean
+    public WebClient relayWebClient() {
+        return WebClient.builder()
+                .baseUrl(RELAY_BASE_URL)
                 .build();
     }
 }
