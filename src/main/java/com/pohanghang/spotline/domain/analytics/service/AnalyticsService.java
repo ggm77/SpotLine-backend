@@ -8,7 +8,7 @@ import com.pohanghang.spotline.domain.store.entity.Store;
 import com.pohanghang.spotline.domain.store.service.StoreService;
 import com.pohanghang.spotline.domain.analytics.model.AnalyticsRow;
 import com.pohanghang.spotline.domain.analytics.model.CoreCustomerGroup;
-import com.pohanghang.spotline.domain.analytics.util.PredictionTomorrowCalculator;
+import com.pohanghang.spotline.domain.analytics.client.PythonPredictionClient;
 import com.pohanghang.spotline.domain.analytics.util.VisitTrendCalculator;
 import com.pohanghang.spotline.domain.analytics.util.WeatherImpactCalculator;
 import com.pohanghang.spotline.domain.analytics.util.WeekdayPatternCalculator;
@@ -32,6 +32,7 @@ import java.util.Comparator;
 import java.util.EnumMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 
 /**
  * v1 통계 API. 비전 AI가 적재한 {@link VisionData} 스냅샷들을 집계한다.
@@ -57,6 +58,7 @@ public class AnalyticsService {
     private final OpenMeteoClient openMeteoClient;
     private final GeminiClient geminiClient;
     private final StoreService storeService;
+    private final PythonPredictionClient pythonPredictionClient;
 
     @Transactional(readOnly = true)
     public CoreCustomerResponseDto getCoreCustomers(final DefaultStartAtEndAtRequestDto defaultStartAtEndAtRequestDto) {
@@ -162,35 +164,31 @@ public class AnalyticsService {
                 .withNano(0);
 
         OpenMeteoClient.WeatherData weatherData = getWeatherData(tomorrowAfternoon);
-        Weather tomorrowWeather = weatherData.weather();
+        int todayCount = getMostRecentDailyCount(rows);
 
-        return PredictionTomorrowCalculator.calculate(rows, tomorrowWeather, tomorrowAfternoon.toLocalDate());
+        return pythonPredictionClient.predict(rows, todayCount, List.of(weatherData)).get(0);
     }
 
     @Transactional(readOnly = true)
     public PredictionNextWeekResponseDto getPredictionNextWeek() {
         final List<AnalyticsRow> rows = loadRows();
-        List<PredictionTomorrowResponseDto> nextWeekPredictions = new ArrayList<>();
 
         LocalDateTime now = LocalDateTime.now(ZoneId.of("Asia/Seoul"));
+        int todayCount = getMostRecentDailyCount(rows);
 
+        List<OpenMeteoClient.WeatherData> forecasts = new ArrayList<>();
         for (int i = 1; i <= 7; i++) {
             LocalDateTime targetAfternoon = now.plusDays(i)
                     .withHour(14)
                     .withMinute(0)
                     .withSecond(0)
                     .withNano(0);
-
-            OpenMeteoClient.WeatherData weatherData = getWeatherData(targetAfternoon);
-            Weather targetWeather = weatherData.weather();
-
-            PredictionTomorrowResponseDto prediction = PredictionTomorrowCalculator.calculate(
-                    rows, targetWeather, targetAfternoon.toLocalDate()
-            );
-            nextWeekPredictions.add(prediction);
+            forecasts.add(getWeatherData(targetAfternoon));
         }
 
-        return new PredictionNextWeekResponseDto(nextWeekPredictions);
+        return new PredictionNextWeekResponseDto(
+                pythonPredictionClient.predict(rows, todayCount, forecasts)
+        );
     }
 
     @Transactional(readOnly = true)
@@ -289,7 +287,7 @@ public class AnalyticsService {
             OpenMeteoClient.WeatherData todayWeather = getWeatherData(todayAfternoon);
             Weather twW = todayWeather.weather();
             todayWeatherStr = twW == Weather.SUNNY ? "맑음" : (twW == Weather.CLOUDY ? "흐림" : (twW == Weather.RAINY ? "비" : "눈"));
-            todayPrediction = PredictionTomorrowCalculator.calculate(rows, twW, today);
+            todayPrediction = pythonPredictionClient.predict(rows, yesterdayVisits, List.of(todayWeather)).get(0);
         } catch (Exception e) {
             todayPrediction = new PredictionTomorrowResponseDto(yesterdayVisits, yesterdayVisits, yesterdayVisits);
         }
@@ -456,6 +454,20 @@ public class AnalyticsService {
         }
 
         return new DailyVisitCountResponseDto(found ? totalVisits : -1);
+    }
+
+    // 가장 최근 날짜의 일별 방문자 합산 (Python 모델의 prev_day_count 입력용)
+    private int getMostRecentDailyCount(List<AnalyticsRow> rows) {
+        Optional<LocalDate> mostRecentDate = rows.stream()
+                .filter(r -> r.getStartAt() != null)
+                .map(r -> r.getStartAt().toLocalDate())
+                .max(Comparator.naturalOrder());
+        if (mostRecentDate.isEmpty()) return 0;
+        return rows.stream()
+                .filter(r -> r.getStartAt() != null && r.getTotalCount() != null)
+                .filter(r -> r.getStartAt().toLocalDate().equals(mostRecentDate.get()))
+                .mapToInt(AnalyticsRow::getTotalCount)
+                .sum();
     }
 
     // ===== VisionData 기반 데이터 빌더 =====
