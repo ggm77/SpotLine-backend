@@ -4,6 +4,7 @@ import com.pohanghang.spotline.domain.analytics.dto.CoreCustomerV2ResponseDto;
 import com.pohanghang.spotline.domain.analytics.dto.CountResponseDto;
 import com.pohanghang.spotline.domain.analytics.dto.DailyCountResponseDto;
 import com.pohanghang.spotline.domain.analytics.dto.DailySalesResponseDto;
+import com.pohanghang.spotline.domain.analytics.dto.GenderDistributionResponseDto;
 import com.pohanghang.spotline.domain.analytics.dto.MenuResponseDto;
 import com.pohanghang.spotline.domain.analytics.dto.TimeResponseDto;
 import com.pohanghang.spotline.domain.analytics.dto.VisitTrendResponseDto;
@@ -119,5 +120,14 @@ public class AnalyticsV2Controller {
             @RequestParam("endAt") @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) final LocalDateTime endAt
     ) {
         return ResponseEntity.ok(analyticsV2Service.getAvgDwell(startAt, endAt));
+    }
+
+    // 성별 분포
+    @GetMapping("/gender-distribution")
+    public ResponseEntity<GenderDistributionResponseDto> getGenderDistribution(
+            @RequestParam("startAt") @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) final LocalDateTime startAt,
+            @RequestParam("endAt") @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) final LocalDateTime endAt
+    ) {
+        return ResponseEntity.ok(analyticsV2Service.getGenderDistribution(startAt, endAt));
     }
 }

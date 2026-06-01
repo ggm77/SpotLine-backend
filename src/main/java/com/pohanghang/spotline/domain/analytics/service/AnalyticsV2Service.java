@@ -4,6 +4,7 @@ import com.pohanghang.spotline.domain.analytics.dto.CoreCustomerV2ResponseDto;
 import com.pohanghang.spotline.domain.analytics.dto.CountResponseDto;
 import com.pohanghang.spotline.domain.analytics.dto.DailyCountResponseDto;
 import com.pohanghang.spotline.domain.analytics.dto.DailySalesResponseDto;
+import com.pohanghang.spotline.domain.analytics.dto.GenderDistributionResponseDto;
 import com.pohanghang.spotline.domain.analytics.dto.MenuResponseDto;
 import com.pohanghang.spotline.domain.analytics.dto.TimeResponseDto;
 import com.pohanghang.spotline.domain.analytics.dto.VisitTrendResponseDto;
@@ -218,6 +219,29 @@ public class AnalyticsV2Service {
                 .orElse(-1.0);
 
         return new TimeResponseDto((int) Math.round(avgMinutes));
+    }
+
+    // 성별 분포 - 구간 내 VisionPerson의 gender(1=남, 2=여, null 제외) 집계
+    @Transactional(readOnly = true)
+    public GenderDistributionResponseDto getGenderDistribution(final LocalDateTime startAt, final LocalDateTime endAt) {
+        validateRange(startAt, endAt);
+
+        int male = 0;
+        int female = 0;
+
+        for (VisionData visionData : visionDataRepository.findOverlappingWithPeople(startAt, endAt)) {
+            for (VisionPerson person : visionData.getPeople()) {
+                if (person.getGender() == null) continue;
+                if (person.getGender() == 1) male++;
+                else if (person.getGender() == 2) female++;
+            }
+        }
+
+        if (male == 0 && female == 0) {
+            return new GenderDistributionResponseDto(-1, -1);
+        }
+
+        return new GenderDistributionResponseDto(male, female);
     }
 
     private List<VisionData> findOverlapping(final LocalDateTime startAt, final LocalDateTime endAt) {
