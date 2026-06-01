@@ -43,10 +43,15 @@ public class PythonPredictionClient {
                     "--days-json", daysJson
             ).start();
 
-            String output = new String(process.getInputStream().readAllBytes());
-            process.waitFor();
+            String stdout = new String(process.getInputStream().readAllBytes()).trim();
+            String stderr = new String(process.getErrorStream().readAllBytes()).trim();
+            int exitCode = process.waitFor();
 
-            return parseResult(output);
+            if (exitCode != 0 || stdout.isEmpty()) {
+                throw new RuntimeException("Python 종료코드=" + exitCode + " stderr=" + stderr);
+            }
+
+            return parseResult(stdout);
         } catch (Exception e) {
             throw new RuntimeException("Python 예측 모델 호출 실패: " + e.getMessage(), e);
         } finally {
