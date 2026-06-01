@@ -132,16 +132,6 @@ public class AnalyticsService {
         return WeekdayPatternCalculator.calculate(weekdayPatternRequestDto, loadRows());
     }
 
-    @Transactional(readOnly = true)
-    public VisitCountResponseDto getVisitCount(final DefaultStartAtEndAtRequestDto defaultStartAtEndAtRequestDto) {
-        validateRange(defaultStartAtEndAtRequestDto);
-
-        return VisitTrendCalculator.calculateTrend(
-                defaultStartAtEndAtRequestDto.startAt(),
-                defaultStartAtEndAtRequestDto.endAt(),
-                loadRows()
-        );
-    }
 
     @Transactional(readOnly = true)
     public PredictionTomorrowResponseDto getPredictionTomorrow() {
