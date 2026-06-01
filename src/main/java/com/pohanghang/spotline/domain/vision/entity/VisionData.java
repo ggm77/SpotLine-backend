@@ -31,8 +31,6 @@ public class VisionData {
     @Column(nullable = false)
     private Integer totalCount; // 구간 내 총 방문자 수
 
-    private Integer peakTime; // 가장 바쁜 시각 (시)
-
     private Integer maxResponseWaitTime; // 최대 응대 대기 시간 (분)
 
     private Integer maxEmptyTableTime; // 최대 테이블 유휴 시간 (분)
@@ -65,7 +63,6 @@ public class VisionData {
     @Builder
     public VisionData(
             final Integer totalCount,
-            final Integer peakTime,
             final Integer maxResponseWaitTime,
             final Integer maxEmptyTableTime,
             final Integer coreCustomerAge,
@@ -78,7 +75,6 @@ public class VisionData {
             final Double temperature
     ) {
         this.totalCount = totalCount;
-        this.peakTime = peakTime;
         this.maxResponseWaitTime = maxResponseWaitTime;
         this.maxEmptyTableTime = maxEmptyTableTime;
         this.coreCustomerAge = coreCustomerAge;

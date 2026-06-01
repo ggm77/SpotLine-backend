@@ -45,7 +45,6 @@ public class VisionService {
         // 4) 스냅샷 엔티티 생성
         final VisionData visionData = VisionData.builder()
                 .totalCount(visionDataRequestDto.totalCount())
-                .peakTime(visionDataRequestDto.peakTime())
                 .maxResponseWaitTime(visionDataRequestDto.maxResponseWaitTime())
                 .maxEmptyTableTime(visionDataRequestDto.maxEmptyTableTime())
                 .coreCustomerAge(visionDataRequestDto.coreCustomerAge())

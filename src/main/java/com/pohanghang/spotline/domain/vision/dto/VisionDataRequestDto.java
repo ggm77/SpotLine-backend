@@ -4,7 +4,6 @@ import java.util.List;
 
 public record VisionDataRequestDto(
         Integer totalCount, // 총 방문자 수
-        Integer peakTime, // 가장 바쁜 시각 (시)
         Integer maxResponseWaitTime, // 최대 응대 대기 시간 (분)
         List<VisionDataPersonDto> people, // 방문자별 입·퇴장 정보
         Integer maxEmptyTableTime, // 최대 테이블 유휴 시간 (분)

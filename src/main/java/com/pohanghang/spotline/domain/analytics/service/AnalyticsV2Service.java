@@ -49,20 +49,18 @@ public class AnalyticsV2Service {
         return new CountResponseDto(count);
     }
 
-    // 몇 시가 가장 바쁜가 - 구간 내 스냅샷들의 peakTime 중 가장 자주 나타난 시각 (null 제외)
+    // 몇 시가 가장 바쁜가 - 구간 내 스냅샷을 시간(capturedAt의 hour)별로 totalCount 합산, 가장 높은 시각 반환
     @Transactional(readOnly = true)
     public TimeResponseDto getPeakTime(final LocalDateTime startAt, final LocalDateTime endAt) {
         validateRange(startAt, endAt);
 
-        final Map<Integer, Long> peakHourCounts = new HashMap<>();
+        final Map<Integer, Integer> countByHour = new HashMap<>();
         for (VisionData visionData : findOverlapping(startAt, endAt)) {
-            if (visionData.getPeakTime() == null) {
-                continue;
-            }
-            peakHourCounts.merge(visionData.getPeakTime(), 1L, Long::sum);
+            if (visionData.getCapturedAt() == null || visionData.getTotalCount() == null) continue;
+            countByHour.merge(visionData.getCapturedAt().getHour(), visionData.getTotalCount(), Integer::sum);
         }
 
-        final int time = peakHourCounts.entrySet().stream()
+        final int time = countByHour.entrySet().stream()
                 .max(Map.Entry.comparingByValue())
                 .map(Map.Entry::getKey)
                 .orElse(-1);
