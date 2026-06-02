@@ -12,7 +12,6 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 import reactor.core.publisher.Flux;
 
-import java.io.IOException;
 import java.time.LocalDateTime;
 
 
@@ -38,9 +37,8 @@ public class VideoController {
     public ResponseEntity<Void> streamVideo(
             @RequestParam(value = "createdAt") @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) final LocalDateTime createdAt,
             @RequestPart(value = "fileChunk") final MultipartFile fileChunk
-    ) throws IOException {
+    ) {
         videoService.relayStreamChunk(createdAt, fileChunk);
-        videoStreamSink.emit(fileChunk.getBytes());
         return ResponseEntity.noContent().build();
     }
 }

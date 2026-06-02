@@ -1,13 +1,18 @@
 package com.pohanghang.spotline.domain.vision.controller;
 
+import com.pohanghang.spotline.domain.video.VideoStreamSink;
 import com.pohanghang.spotline.domain.vision.dto.VisionDataRequestDto;
 import com.pohanghang.spotline.domain.vision.service.VisionService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestPart;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.multipart.MultipartFile;
+
+import java.io.IOException;
 
 @RestController
 @RequestMapping("/api/v2")
@@ -15,12 +20,17 @@ import org.springframework.web.bind.annotation.RestController;
 public class VisionController {
 
     private final VisionService visionService;
+    private final VideoStreamSink videoStreamSink;
 
-    @PostMapping("/vision/data")
+    @PostMapping(value = "/vision/data", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<Void> createVisionData(
-            @RequestBody final VisionDataRequestDto visionDataRequestDto
-    ) {
+            @RequestPart("data") final VisionDataRequestDto visionDataRequestDto,
+            @RequestPart(value = "video", required = false) final MultipartFile video
+    ) throws IOException {
         visionService.saveVisionData(visionDataRequestDto);
+        if (video != null && !video.isEmpty()) {
+            videoStreamSink.emit(video.getBytes());
+        }
         return ResponseEntity.noContent().build();
     }
 }
