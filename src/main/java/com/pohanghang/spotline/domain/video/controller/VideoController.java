@@ -1,15 +1,16 @@
 package com.pohanghang.spotline.domain.video.controller;
 
+import com.pohanghang.spotline.domain.video.VideoStreamSink;
 import com.pohanghang.spotline.domain.video.service.VideoService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.core.io.buffer.DataBuffer;
+import org.springframework.core.io.buffer.DefaultDataBufferFactory;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 import reactor.core.publisher.Flux;
-import reactor.core.publisher.Mono;
 
 import java.time.LocalDateTime;
 
@@ -19,10 +20,16 @@ import java.time.LocalDateTime;
 public class VideoController {
 
     private final VideoService videoService;
+    private final VideoStreamSink videoStreamSink;
 
-    @GetMapping("/video/stream")
-    public Mono<ResponseEntity<Flux<DataBuffer>>> proxyStream() {
-        return videoService.proxyStream();
+    // Spring Boot → Frontend 실시간 스트리밍
+    @GetMapping(value = "/video/stream", produces = MediaType.APPLICATION_OCTET_STREAM_VALUE)
+    public ResponseEntity<Flux<DataBuffer>> streamToFrontend() {
+        final Flux<DataBuffer> flux = videoStreamSink.flux()
+                .map(bytes -> DefaultDataBufferFactory.sharedInstance.wrap(bytes));
+        return ResponseEntity.ok()
+                .contentType(MediaType.APPLICATION_OCTET_STREAM)
+                .body(flux);
     }
 
     @PostMapping(value = "/video/stream", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
