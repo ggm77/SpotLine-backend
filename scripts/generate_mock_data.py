@@ -22,17 +22,17 @@ import requests
 SNAPSHOT_HOURS = [9, 11, 13, 15, 17, 19, 21, 22]   # 스냅샷 시작 시각(시)
 SNAPSHOT_DURATION = 2                                # 스냅샷 길이(시간)
 
-# 시간대별 방문자 수 기준 (평일)
-WEEKDAY_BASE = {9: 8, 11: 14, 13: 22, 15: 12, 17: 10, 19: 18, 21: 9, 22: 4}
-# 주말 보정 (1.3배)
-WEEKEND_MULTIPLIER = 1.3
+# 시간대별 방문자 수 기준 (평일) — 20~35명 범위 기준으로 설정
+WEEKDAY_BASE = {9: 21, 11: 26, 13: 31, 15: 25, 17: 23, 19: 28, 21: 22, 22: 20}
+# 주말 보정 (1.05배 — 완만하게)
+WEEKEND_MULTIPLIER = 1.05
 
-# 날씨 → (weather 문자열, 온도 범위, 방문자 감소율)
+# 날씨 → (weather 문자열, 온도 범위, 방문자 감소율) — 감소폭 축소
 WEATHERS = [
-    ("SUNNY",  (22, 28), 1.0),
-    ("CLOUDY", (18, 24), 0.9),
-    ("RAINY",  (15, 20), 0.7),
-    ("SNOW",   (0,   5), 0.6),
+    ("SUNNY",  (22, 28), 1.00),
+    ("CLOUDY", (18, 24), 0.93),
+    ("RAINY",  (15, 20), 0.85),
+    ("SNOW",   (0,   5), 0.80),
 ]
 WEATHER_WEIGHTS = [0.45, 0.30, 0.20, 0.05]
 
@@ -121,12 +121,15 @@ def main():
         is_weekend   = day.weekday() >= 5
         weather_name, temp_range, rain_factor = random.choices(WEATHERS, weights=WEATHER_WEIGHTS)[0]
         temperature  = round(random.uniform(*temp_range), 1)
+        # 기간 전체에 걸쳐 완만한 우상향 추세 (1.0 → 1.12)
+        trend = 1.0 + 0.12 * (day_offset / max(total_days - 1, 1))
 
         for hour in SNAPSHOT_HOURS:
             base_count   = WEEKDAY_BASE[hour]
             if is_weekend:
                 base_count = int(base_count * WEEKEND_MULTIPLIER)
-            visitor_count = max(1, int(base_count * rain_factor * random.uniform(0.7, 1.3)))
+            # 변동폭 ±8%, 결과는 20~35명으로 클램핑
+            visitor_count = max(20, min(35, int(base_count * rain_factor * trend * random.uniform(0.92, 1.08))))
 
             payload = make_snapshot(day, hour, weather_name, temperature, visitor_count)
 
