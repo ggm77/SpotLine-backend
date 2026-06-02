@@ -7,9 +7,12 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestPart;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.multipart.MultipartFile;
+
+import java.io.IOException;
 
 @RestController
 @RequestMapping("/api/v2")
@@ -19,19 +22,15 @@ public class VisionController {
     private final VisionService visionService;
     private final VideoStreamSink videoStreamSink;
 
-    // 비전 AI 분석 데이터 입력
-    @PostMapping("/vision/data")
+    @PostMapping(value = "/vision/data", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<Void> createVisionData(
-            @RequestBody final VisionDataRequestDto visionDataRequestDto
-    ) {
+            @RequestPart("data") final VisionDataRequestDto visionDataRequestDto,
+            @RequestPart(value = "video", required = false) final MultipartFile video
+    ) throws IOException {
         visionService.saveVisionData(visionDataRequestDto);
-        return ResponseEntity.noContent().build();
-    }
-
-    // FastAPI → Spring Boot 영상 청크 수신
-    @PostMapping(value = "/vision/stream", consumes = MediaType.APPLICATION_OCTET_STREAM_VALUE)
-    public ResponseEntity<Void> receiveVideoChunk(@RequestBody final byte[] chunk) {
-        videoStreamSink.emit(chunk);
+        if (video != null && !video.isEmpty()) {
+            videoStreamSink.emit(video.getBytes());
+        }
         return ResponseEntity.noContent().build();
     }
 }
