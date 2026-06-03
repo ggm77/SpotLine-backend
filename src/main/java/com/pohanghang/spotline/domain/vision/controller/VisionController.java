@@ -2,10 +2,12 @@ package com.pohanghang.spotline.domain.vision.controller;
 
 import com.pohanghang.spotline.domain.video.VideoStreamSink;
 import com.pohanghang.spotline.domain.vision.dto.VisionDataRequestDto;
+import com.pohanghang.spotline.domain.vision.dto.VisionDataResponseDto;
 import com.pohanghang.spotline.domain.vision.service.VisionService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestPart;
@@ -32,5 +34,10 @@ public class VisionController {
             videoStreamSink.emit(video.getBytes());
         }
         return ResponseEntity.noContent().build();
+    }
+
+    @GetMapping("/vision/data/latest")
+    public ResponseEntity<VisionDataResponseDto> getLatestVisionData() {
+        return ResponseEntity.ok(visionService.getLatestVisionData());
     }
 }

@@ -3,6 +3,7 @@ package com.pohanghang.spotline.domain.vision.service;
 import com.pohanghang.spotline.domain.analytics.entity.Weather;
 import com.pohanghang.spotline.domain.vision.dto.VisionDataPersonDto;
 import com.pohanghang.spotline.domain.vision.dto.VisionDataRequestDto;
+import com.pohanghang.spotline.domain.vision.dto.VisionDataResponseDto;
 import com.pohanghang.spotline.domain.vision.entity.VisionData;
 import com.pohanghang.spotline.domain.vision.entity.VisionPerson;
 import com.pohanghang.spotline.domain.vision.repository.VisionDataRepository;
@@ -77,6 +78,13 @@ public class VisionService {
 
         // 6) 저장 (people 은 cascade 로 함께 저장)
         visionDataRepository.save(visionData);
+    }
+
+    @Transactional(readOnly = true)
+    public VisionDataResponseDto getLatestVisionData() {
+        return visionDataRepository.findTopByOrderByCreatedAtDesc()
+                .map(VisionDataResponseDto::from)
+                .orElseThrow(() -> new CustomException(ExceptionCode.VISION_DATA_NOT_FOUND));
     }
 
     private OpenMeteoClient.WeatherData resolveWeather(final LocalDateTime capturedAt) {

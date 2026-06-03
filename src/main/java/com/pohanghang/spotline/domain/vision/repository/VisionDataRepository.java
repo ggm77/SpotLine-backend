@@ -40,4 +40,6 @@ public interface VisionDataRepository extends JpaRepository<VisionData, Long> {
     );
 
     Optional<VisionData> findTopByOrderByCapturedAtDesc();
+
+    Optional<VisionData> findTopByOrderByCreatedAtDesc();
 }

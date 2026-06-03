@@ -17,6 +17,7 @@ public enum ExceptionCode {
     VIDEO_NOT_FOUND(HttpStatus.BAD_REQUEST, "영상이 존재하지 않습니다."),
     ANALYTICS_NOT_FOUND(HttpStatus.BAD_REQUEST, "분석 결과를 찾을 수 없습니다."),
     STORE_NOT_FOUND(HttpStatus.BAD_REQUEST, "가게 정보를 찾을 수 없습니다."),
+    VISION_DATA_NOT_FOUND(HttpStatus.BAD_REQUEST, "비전 데이터를 찾을 수 없습니다."),
 
     FFMPEG_ERROR(HttpStatus.INTERNAL_SERVER_ERROR, "FFmpeg에서 오류가 발생했습니다."),
     PROCESS_INTERRUPTED(HttpStatus.INTERNAL_SERVER_ERROR, "프로세스 실행이 중단되었습니다."),
