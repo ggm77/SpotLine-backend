@@ -24,12 +24,12 @@ public class VideoController {
     private final VideoStreamSink videoStreamSink;
 
     // Spring Boot → Frontend 실시간 스트리밍
-    @GetMapping(value = "/video/stream", produces = MediaType.APPLICATION_OCTET_STREAM_VALUE)
+    @GetMapping(value = "/video/stream", produces = "video/mp4")
     public ResponseEntity<Flux<DataBuffer>> streamToFrontend() {
         final Flux<DataBuffer> flux = videoStreamSink.flux()
                 .map(bytes -> DefaultDataBufferFactory.sharedInstance.wrap(bytes));
         return ResponseEntity.ok()
-                .contentType(MediaType.APPLICATION_OCTET_STREAM)
+                .contentType(MediaType.parseMediaType("video/mp4"))
                 .body(flux);
     }
 
