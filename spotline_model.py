@@ -17,10 +17,10 @@ def load_and_preprocess_data(file_path):
 
     # captured_at 날짜 타입 파싱
     df['captured_at'] = pd.to_datetime(df['captured_at'])
+    df.sort_values('captured_at', inplace=True)
 
-    # 요일 코드 (월=0 ~ 일=6) 및 주말 여부 생성 (토/일 = 1, 평일 = 0)
-    df['day_of_week'] = df['captured_at'].dt.dayofweek
-    df['is_weekend'] = df['day_of_week'].apply(lambda x: 1 if x >= 5 else 0)
+    # 주말 여부 생성 (토/일 = 1, 평일 = 0)
+    df['is_weekend'] = (df['captured_at'].dt.dayofweek >= 5).astype(int)
 
     # 시계열 지연 변수: 어제 실제 방문자 수 (Lag Feature)
     df['prev_day_count'] = df['total_count'].shift(1)
@@ -45,35 +45,37 @@ def train_ridge_model(df_clean, verbose=False):
     X = df_encoded[features]
     y = df_encoded['total_count']
 
-    # Ridge의 L2 규제 밸런스를 위한 피처 스케일링
-    scaler = StandardScaler()
-    X_scaled = scaler.fit_transform(X)
-
-    # 데이터셋 분할 (80% 학습, 20% 검증)
+    # 시계열 순서 유지 분할 (80% 학습, 20% 검증)
     X_train, X_test, y_train, y_test = train_test_split(
-        X_scaled, y, test_size=0.2, random_state=42
+        X, y, test_size=0.2, shuffle=False
     )
+
+    # 훈련 데이터만으로 스케일러 fit (테스트 누출 방지)
+    scaler = StandardScaler()
+    X_train_scaled = scaler.fit_transform(X_train)
+    X_test_scaled = scaler.transform(X_test)
 
     # 릿지 회귀 그리드서치 하이퍼파라미터 최적화 범위 정의
     param_grid = {
         'alpha': [0.01, 0.05, 0.1, 0.5, 1.0, 2.0, 5.0, 10.0, 20.0, 50.0, 100.0]
     }
 
-    # 5-Fold 교차 검증 및 MAE 기준 평가지표를 통한 GridSearchCV 객체 빌드
+    # 데이터 크기에 따라 CV fold 수 동적 조정
+    cv = min(5, max(2, len(X_train) // 5))
     grid_search = GridSearchCV(
         estimator=Ridge(),
         param_grid=param_grid,
         scoring='neg_mean_absolute_error',
-        cv=5
+        cv=cv
     )
-    grid_search.fit(X_train, y_train)
+    grid_search.fit(X_train_scaled, y_train)
 
     # 최적의 릿지 모델 및 하이퍼파라미터(alpha) 획득
     best_model = grid_search.best_estimator_
     best_alpha = grid_search.best_params_['alpha']
 
     # 최적 모델로 검증 세트 예측 및 평가
-    y_pred = best_model.predict(X_test)
+    y_pred = best_model.predict(X_test_scaled)
     mae = mean_absolute_error(y_test, y_pred)
     r2 = r2_score(y_test, y_pred)
 
