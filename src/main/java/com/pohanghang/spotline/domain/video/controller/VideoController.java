@@ -29,6 +29,7 @@ public class VideoController {
         final Flux<DataBuffer> flux = videoStreamSink.flux()
                 .map(bytes -> DefaultDataBufferFactory.sharedInstance.wrap(bytes));
         return ResponseEntity.ok()
+                .header("X-Accel-Buffering", "no")
                 .contentType(MediaType.parseMediaType("video/mp4"))
                 .body(flux);
     }

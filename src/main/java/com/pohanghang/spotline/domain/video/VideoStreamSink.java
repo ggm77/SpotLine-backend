@@ -7,8 +7,8 @@ import reactor.core.publisher.Sinks;
 @Component
 public class VideoStreamSink {
 
-    // directBestEffort: 구독자 없으면 프레임 드롭 (라이브 스트림에 적합)
-    private final Sinks.Many<byte[]> sink = Sinks.many().multicast().directBestEffort();
+    // onBackpressureBuffer: 구독자 demand 타이밍과 무관하게 버퍼링 후 전달 (emit 드롭 방지)
+    private final Sinks.Many<byte[]> sink = Sinks.many().multicast().onBackpressureBuffer();
 
     public void emit(final byte[] chunk) {
         sink.tryEmitNext(chunk);
