@@ -88,6 +88,7 @@ Base URL: `https://{host}`
 | 필드 | 타입 | 필수 | 설명 |
 |---|---|---|---|
 | `data` | JSON | Y | 아래 구조 참고 |
+| `video` | Binary | N | YOLO 처리된 mp4 청크 (있으면 프론트로 중계) |
 
 **`data` JSON 구조**
 ```json
@@ -121,19 +122,6 @@ Base URL: `https://{host}`
 | `avgDwellTime` | 평균 체류시간 (분) |
 | `justLeftCount` | 그냥 나간 손님 수 |
 | `people[].dwellTime` | 개인 체류시간 (초) |
-
-**Response 204** No Content
-
----
-
-### POST /api/v2/vision/stream
-비전서버 → Spring Boot 처리된 영상 청크 전송
-
-**Request Body** `multipart/form-data`
-
-| 필드 | 타입 | 필수 | 설명 |
-|---|---|---|---|
-| `video` | Binary | Y | YOLO 처리된 mp4 청크 |
 
 **Response 204** No Content
 
