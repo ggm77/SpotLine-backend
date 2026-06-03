@@ -57,7 +57,8 @@ public class GeminiClient {
                     .retrieve()
                     .bodyToMono(GeminiResponseDto.class)
                     .timeout(Duration.ofSeconds(30))
-                    .retryWhen(Retry.backoff(2, Duration.ofSeconds(1)))
+                    .retryWhen(Retry.backoff(2, Duration.ofSeconds(1))
+                            .filter(e -> !(e instanceof WebClientResponseException wcre && wcre.getStatusCode().is4xxClientError())))
                     .block();
 
             if (response == null) {
@@ -65,8 +66,13 @@ public class GeminiClient {
             }
 
             return response.getFirstText();
-        } catch (WebClientResponseException e) {
-            log.error("Vertex AI 오류 {} - 응답 바디: {}", e.getStatusCode(), e.getResponseBodyAsString());
+        } catch (Exception e) {
+            Throwable cause = e.getCause() != null ? e.getCause() : e;
+            if (cause instanceof WebClientResponseException wcre) {
+                log.error("Vertex AI 오류 {} - 응답 바디: {}", wcre.getStatusCode(), wcre.getResponseBodyAsString());
+            } else {
+                log.error("Vertex AI 호출 실패: {}", e.getMessage());
+            }
             throw new CustomException(ExceptionCode.INTERNAL_SERVER_ERROR);
         }
     }
