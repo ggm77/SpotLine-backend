@@ -36,12 +36,14 @@ public class PythonPredictionClient {
             csvPath = writeDailyCsv(rows);
             String daysJson = buildDaysJson(forecasts);
 
-            Process process = new ProcessBuilder(
+            ProcessBuilder pb = new ProcessBuilder(
                     pythonBin, scriptPath,
                     "--csv", csvPath.toString(),
                     "--today-count", String.valueOf(todayCount),
                     "--days-json", daysJson
-            ).start();
+            );
+            pb.environment().remove("PYTHONPATH");
+            Process process = pb.start();
 
             String stdout = new String(process.getInputStream().readAllBytes()).trim();
             String stderr = new String(process.getErrorStream().readAllBytes()).trim();
