@@ -12,6 +12,8 @@ import org.springframework.web.reactive.function.client.WebClient;
 
 import java.io.IOException;
 import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
+
 
 @Component
 public class VideoRelayClient {
@@ -25,19 +27,23 @@ public class VideoRelayClient {
         this.relayWebClient = relayWebClient;
     }
 
-    public void relayChunk(final LocalDateTime createdAt, final MultipartFile fileChunk) {
+    private static final DateTimeFormatter ISO_UTC =
+            DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'");
+
+    public void relayChunk(final LocalDateTime createdAt, final MultipartFile fileChunk, final String sessionId) {
         try {
             final byte[] bytes = fileChunk.getBytes();
             final String originalFilename = fileChunk.getOriginalFilename();
 
             final MultipartBodyBuilder builder = new MultipartBodyBuilder();
-            builder.part("fileChunk", new ByteArrayResource(bytes) {
+            builder.part("file", new ByteArrayResource(bytes) {
                 @Override
                 public String getFilename() {
                     return originalFilename != null ? originalFilename : "chunk.mp4";
                 }
             }).contentType(MediaType.APPLICATION_OCTET_STREAM);
-            builder.part("createdAt", createdAt.toString());
+            builder.part("createdAt", createdAt.format(ISO_UTC));
+            builder.part("sessionId", sessionId);
 
             relayWebClient.post()
                     .uri(streamPath)

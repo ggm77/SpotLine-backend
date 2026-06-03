@@ -15,7 +15,7 @@ public class VideoService {
 
     private final VideoRelayClient videoRelayClient;
 
-    public void relayStreamChunk(final LocalDateTime createdAt, final MultipartFile fileChunk) {
+    public void relayStreamChunk(final LocalDateTime createdAt, final MultipartFile fileChunk, final String sessionId) {
         if (createdAt == null) {
             throw new CustomException(ExceptionCode.INVALID_REQUEST);
         }
@@ -23,6 +23,6 @@ public class VideoService {
             throw new CustomException(ExceptionCode.INVALID_FILE);
         }
 
-        videoRelayClient.relayChunk(createdAt, fileChunk);
+        videoRelayClient.relayChunk(createdAt, fileChunk, sessionId);
     }
 }

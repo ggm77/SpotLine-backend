@@ -36,9 +36,10 @@ public class VideoController {
     @PostMapping(value = "/video/stream", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<Void> streamVideo(
             @RequestParam(value = "createdAt") @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) final LocalDateTime createdAt,
-            @RequestPart(value = "fileChunk") final MultipartFile fileChunk
+            @RequestPart(value = "fileChunk") final MultipartFile fileChunk,
+            @RequestParam(value = "sessionId", defaultValue = "default") final String sessionId
     ) {
-        videoService.relayStreamChunk(createdAt, fileChunk);
+        videoService.relayStreamChunk(createdAt, fileChunk, sessionId);
         return ResponseEntity.noContent().build();
     }
 }
