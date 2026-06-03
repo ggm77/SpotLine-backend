@@ -8,8 +8,8 @@ import org.springframework.web.reactive.function.client.WebClient;
 @Configuration
 public class WebClientConfig {
 
-    @Value("${gemini.url}")
-    private String GEMINI_URL;
+    @Value("${vertex-ai.location}")
+    private String vertexLocation;
 
     @Value("${toss-pos.base-url}")
     private String TOSS_POS_BASE_URL;
@@ -27,7 +27,7 @@ public class WebClientConfig {
     @Bean
     public WebClient geminiWebClient() {
         return WebClient.builder()
-                .baseUrl(GEMINI_URL)
+                .baseUrl("https://" + vertexLocation + "-aiplatform.googleapis.com")
                 .build();
     }
 
