@@ -24,17 +24,13 @@ public class VisionController {
 
     @PostMapping(value = "/vision/data", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<Void> createVisionData(
-            @RequestPart("data") final VisionDataRequestDto visionDataRequestDto
-    ) {
-        visionService.saveVisionData(visionDataRequestDto);
-        return ResponseEntity.noContent().build();
-    }
-
-    @PostMapping(value = "/vision/stream", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
-    public ResponseEntity<Void> receiveVideoChunk(
-            @RequestPart("video") final MultipartFile video
+            @RequestPart("data") final VisionDataRequestDto visionDataRequestDto,
+            @RequestPart(value = "video", required = false) final MultipartFile video
     ) throws IOException {
-        videoStreamSink.emit(video.getBytes());
+        visionService.saveVisionData(visionDataRequestDto);
+        if (video != null && !video.isEmpty()) {
+            videoStreamSink.emit(video.getBytes());
+        }
         return ResponseEntity.noContent().build();
     }
 }
