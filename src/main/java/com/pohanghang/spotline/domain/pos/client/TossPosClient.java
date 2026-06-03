@@ -50,7 +50,7 @@ public class TossPosClient {
                 .mapToInt(o -> ((Number) o.get("netAmount")).intValue())
                 .sum();
         */
-        return 187500; // 목업
+        return 3_600_000; // 목업 (200명 × 평균 18,000원)
     }
 
     // 구간 내 가장 많이 팔린 메뉴명 반환
@@ -92,6 +92,6 @@ public class TossPosClient {
                 .map(e -> itemNames.get(e.getKey()))
                 .orElse(null);
         */
-        return "아메리카노"; // 목업
+        return "삼겹살"; // 목업
     }
 }
