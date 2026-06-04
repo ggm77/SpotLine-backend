@@ -33,16 +33,15 @@ public class GcpSideChannel {
 
     private final GcpProperties props;
     private final GcpRest rest;
-    private final ObjectMapper objectMapper;
+    // Spring Boot 4는 Jackson 3(tools.jackson)을 빈으로 노출 → com.fasterxml ObjectMapper 빈이 없으므로 직접 생성
+    private final ObjectMapper objectMapper = new ObjectMapper();
     private final Executor executor;
 
     public GcpSideChannel(final GcpProperties props,
                           final GcpRest rest,
-                          final ObjectMapper objectMapper,
                           @Qualifier("gcpSideChannelExecutor") final Executor executor) {
         this.props = props;
         this.rest = rest;
-        this.objectMapper = objectMapper;
         this.executor = executor;
     }
 
