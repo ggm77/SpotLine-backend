@@ -21,6 +21,7 @@ import com.pohanghang.spotline.global.exception.constants.ExceptionCode;
 import com.pohanghang.spotline.global.infra.gemini.GeminiClient;
 import com.pohanghang.spotline.global.infra.openmeteo.OpenMeteoClient;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -39,6 +40,7 @@ import java.util.Optional;
  * (과거 영상 분석(Analytics) 대신 /api/v2/vision/data 로 받은 데이터를 사용)
  */
 @Service
+@Slf4j
 @RequiredArgsConstructor
 public class AnalyticsService {
 
@@ -163,7 +165,7 @@ public class AnalyticsService {
                 .withSecond(0)
                 .withNano(0);
 
-        OpenMeteoClient.WeatherData weatherData = getWeatherData(tomorrowAfternoon);
+        OpenMeteoClient.WeatherData weatherData = getWeatherDataOrDefault(tomorrowAfternoon);
         int todayCount = getMostRecentDailyCount(rows);
 
         return pythonPredictionClient.predict(rows, todayCount, List.of(weatherData)).get(0);
@@ -183,7 +185,7 @@ public class AnalyticsService {
                     .withMinute(0)
                     .withSecond(0)
                     .withNano(0);
-            forecasts.add(getWeatherData(targetAfternoon));
+            forecasts.add(getWeatherDataOrDefault(targetAfternoon));
         }
 
         return new PredictionNextWeekResponseDto(
@@ -552,5 +554,15 @@ public class AnalyticsService {
             return openMeteoClient.getWeatherData(store.getLatitude(), store.getLongitude(), targetAt);
         }
         return openMeteoClient.getSeoulWeatherData(targetAt);
+    }
+
+    // 날씨 API가 일시적으로 실패(예: Open-Meteo 502)해도 예측이 500으로 끊기지 않도록 기본값으로 대체한다.
+    private OpenMeteoClient.WeatherData getWeatherDataOrDefault(final LocalDateTime targetAt) {
+        try {
+            return getWeatherData(targetAt);
+        } catch (Exception e) {
+            log.warn("날씨 조회 실패, 기본값(SUNNY)으로 대체합니다. targetAt={}", targetAt, e);
+            return new OpenMeteoClient.WeatherData(null, null, Weather.SUNNY);
+        }
     }
 }
