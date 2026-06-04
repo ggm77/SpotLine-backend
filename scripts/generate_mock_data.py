@@ -1,6 +1,8 @@
 """
 목업 데이터 생성 스크립트
-- 오늘부터 30일 전까지 VisionData + VisionPerson 데이터를 POST /api/v2/vision/data 로 삽입
+- VisionData + VisionPerson 데이터를 POST /api/v2/vision/data 로 삽입
+  (multipart/form-data — "data" 파트에 JSON. weather/temperature 는 서버가
+   capturedAt 기준으로 조회·저장하므로 전송하지 않음)
 - 하루 8개 스냅샷 (2시간 단위, 오전 9시 ~ 오후 11시)
 - 카페 기준 방문 패턴 반영
 
@@ -70,8 +72,7 @@ def make_people(snapshot_start: datetime, snapshot_end: datetime, count: int) ->
     return people
 
 
-def make_snapshot(day: datetime, hour: int, weather_name: str, temperature: float,
-                  visitor_count: int) -> dict:
+def make_snapshot(day: datetime, hour: int, visitor_count: int) -> dict:
     start = day.replace(hour=hour, minute=0, second=0, microsecond=0)
     end   = start + timedelta(hours=SNAPSHOT_DURATION)
 
@@ -84,9 +85,9 @@ def make_snapshot(day: datetime, hour: int, weather_name: str, temperature: floa
     core_gender = max(set(genders), key=genders.count) if genders else None
     avg_dwell   = round(sum(dwell_times) / len(dwell_times) / 60) if dwell_times else None
 
+    # VisionDataRequestDto 가 받는 필드만 전송한다.
     return {
         "totalCount":            visitor_count,
-        "peakTime":              hour + 1,
         "maxResponseWaitTime":   random.randint(1, 10),
         "maxEmptyTableTime":     random.randint(5, 30),
         "coreCustomerAge":       core_age,
@@ -95,8 +96,6 @@ def make_snapshot(day: datetime, hour: int, weather_name: str, temperature: floa
         "justLeftCount":         random.randint(0, max(1, visitor_count // 8)),
         "capturedAt":            fmt(start),
         "endAt":                 fmt(end),
-        "weather":               weather_name,
-        "temperature":           temperature,
         "people":                people,
     }
 
@@ -119,8 +118,8 @@ def main():
     for day_offset in range(total_days):
         day          = start_day + timedelta(days=day_offset)
         is_weekend   = day.weekday() >= 5
-        weather_name, temp_range, rain_factor = random.choices(WEATHERS, weights=WEATHER_WEIGHTS)[0]
-        temperature  = round(random.uniform(*temp_range), 1)
+        # weather_name 은 방문자 수 변동(rain_factor)·로그 표시에만 사용 (전송 X)
+        weather_name, _temp_range, rain_factor = random.choices(WEATHERS, weights=WEATHER_WEIGHTS)[0]
         # 기간 전체에 걸쳐 완만한 우상향 추세 (1.0 → 1.12)
         trend = 1.0 + 0.12 * (day_offset / max(total_days - 1, 1))
 
@@ -131,14 +130,15 @@ def main():
             # 변동폭 ±8%, 결과는 20~35명으로 클램핑
             visitor_count = max(20, min(35, int(base_count * rain_factor * trend * random.uniform(0.92, 1.08))))
 
-            payload = make_snapshot(day, hour, weather_name, temperature, visitor_count)
+            payload = make_snapshot(day, hour, visitor_count)
 
             if args.dry_run:
                 print(json.dumps(payload, ensure_ascii=False, indent=2))
                 continue
 
             try:
-                resp = requests.post(url, json=payload, timeout=10)
+                files = {"data": (None, json.dumps(payload).encode("utf-8"), "application/json")}
+                resp = requests.post(url, files=files, timeout=10)
                 resp.raise_for_status()
                 success += 1
                 print(f"  ✓ {day.date()} {hour:02d}시  방문자 {visitor_count}명  날씨 {weather_name}")
