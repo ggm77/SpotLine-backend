@@ -56,6 +56,10 @@ public class AnalyticsService {
 
     private static final String SYSTEM_PROMPT = "지금부터 당신은 마케팅 전문가가 되어 사장님을 위한 마케팅/운영 제안을 전략적이게 제안합니다.\n볼드 표시를 포함한 각종 md파일을 위한 표현을 전부 제외하고, 오로지 자연어와 숫자로만 대답해.\n";
 
+    // 날씨 API 실패 시 사용할 기본값 (온도 null은 Python 모델에서 15.0으로 처리됨)
+    private static final OpenMeteoClient.WeatherData DEFAULT_WEATHER =
+            new OpenMeteoClient.WeatherData(null, null, Weather.SUNNY);
+
     private final VisionDataRepository visionDataRepository;
     private final OpenMeteoClient openMeteoClient;
     private final GeminiClient geminiClient;
@@ -179,13 +183,23 @@ public class AnalyticsService {
         int todayCount = getMostRecentDailyCount(rows);
 
         List<OpenMeteoClient.WeatherData> forecasts = new ArrayList<>();
+        boolean weatherAvailable = true;
         for (int i = 1; i <= 7; i++) {
             LocalDateTime targetAfternoon = now.plusDays(i)
                     .withHour(14)
                     .withMinute(0)
                     .withSecond(0)
                     .withNano(0);
-            forecasts.add(getWeatherDataOrDefault(targetAfternoon));
+            if (weatherAvailable) {
+                try {
+                    forecasts.add(getWeatherData(targetAfternoon));
+                    continue;
+                } catch (Exception e) {
+                    log.warn("날씨 조회 실패, 남은 일자는 기본값(SUNNY)으로 대체합니다. targetAt={}", targetAfternoon, e);
+                    weatherAvailable = false;
+                }
+            }
+            forecasts.add(DEFAULT_WEATHER);
         }
 
         return new PredictionNextWeekResponseDto(
@@ -562,7 +576,7 @@ public class AnalyticsService {
             return getWeatherData(targetAt);
         } catch (Exception e) {
             log.warn("날씨 조회 실패, 기본값(SUNNY)으로 대체합니다. targetAt={}", targetAt, e);
-            return new OpenMeteoClient.WeatherData(null, null, Weather.SUNNY);
+            return DEFAULT_WEATHER;
         }
     }
 }
