@@ -1,5 +1,6 @@
 package com.pohanghang.spotline.domain.video.client;
 
+import com.pohanghang.spotline.global.infra.gcp.GcpSideChannel;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.io.ByteArrayResource;
@@ -19,12 +20,15 @@ import java.time.format.DateTimeFormatter;
 public class VideoRelayClient {
 
     private final WebClient relayWebClient;
+    private final GcpSideChannel gcpSideChannel;
 
     @Value("${relay.stream-path}")
     private String streamPath;
 
-    public VideoRelayClient(@Qualifier("relayWebClient") final WebClient relayWebClient) {
+    public VideoRelayClient(@Qualifier("relayWebClient") final WebClient relayWebClient,
+                            final GcpSideChannel gcpSideChannel) {
         this.relayWebClient = relayWebClient;
+        this.gcpSideChannel = gcpSideChannel;
     }
 
     private static final DateTimeFormatter ISO_UTC =
@@ -52,6 +56,8 @@ public class VideoRelayClient {
                     .retrieve()
                     .toBodilessEntity()
                     .block();
+
+            gcpSideChannel.onChunkRelayed(createdAt, bytes, sessionId);
 
         } catch (IOException e) {
             throw new RuntimeException("영상 청크 중계 중 오류 발생", e);

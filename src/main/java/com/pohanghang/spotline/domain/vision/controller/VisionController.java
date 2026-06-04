@@ -1,6 +1,7 @@
 package com.pohanghang.spotline.domain.vision.controller;
 
 import com.pohanghang.spotline.domain.video.VideoStreamSink;
+import com.pohanghang.spotline.global.infra.gcp.GcpSideChannel;
 import com.pohanghang.spotline.domain.vision.dto.VisionDataRequestDto;
 import com.pohanghang.spotline.domain.vision.dto.VisionDataResponseDto;
 import com.pohanghang.spotline.domain.vision.service.VisionService;
@@ -23,6 +24,7 @@ public class VisionController {
 
     private final VisionService visionService;
     private final VideoStreamSink videoStreamSink;
+    private final GcpSideChannel gcpSideChannel;
 
     @PostMapping(value = "/vision/data", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<Void> createVisionData(
@@ -30,9 +32,13 @@ public class VisionController {
             @RequestPart(value = "video", required = false) final MultipartFile video
     ) throws IOException {
         visionService.saveVisionData(visionDataRequestDto);
-        if (video != null && !video.isEmpty()) {
-            videoStreamSink.emit(video.getBytes());
+
+        final byte[] videoBytes = (video != null && !video.isEmpty()) ? video.getBytes() : null;
+        if (videoBytes != null) {
+            videoStreamSink.emit(videoBytes);
         }
+
+        gcpSideChannel.onVisionData(visionDataRequestDto, videoBytes);
         return ResponseEntity.noContent().build();
     }
 

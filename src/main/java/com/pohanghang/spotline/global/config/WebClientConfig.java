@@ -44,4 +44,11 @@ public class WebClientConfig {
                 .baseUrl(RELAY_BASE_URL)
                 .build();
     }
+
+    @Bean
+    public WebClient gcpWebClient() {
+        return WebClient.builder()
+                .codecs(configurer -> configurer.defaultCodecs().maxInMemorySize(16 * 1024 * 1024))
+                .build();
+    }
 }
