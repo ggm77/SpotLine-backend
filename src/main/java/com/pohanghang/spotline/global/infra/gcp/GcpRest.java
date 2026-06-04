@@ -59,6 +59,16 @@ public class GcpRest {
                 .block();
     }
 
+    public void delete(final String url) {
+        gcpWebClient.delete()
+                .uri(URI.create(url))
+                .header(HttpHeaders.AUTHORIZATION, bearer())
+                .retrieve()
+                .toBodilessEntity()
+                .timeout(Duration.ofSeconds(10))
+                .block();
+    }
+
     private String bearer() {
         return "Bearer " + tokenProvider.getToken();
     }
