@@ -51,8 +51,8 @@ public class GcpProperties {
     public static class Storage {
         private boolean enabled = false;
         private String bucket = "spotline-archive";
-        /** chunks/ 객체 보존 시간(분). 1시간마다 도는 정리 작업이 이보다 오래된 청크를 삭제 */
-        private int chunkRetentionMinutes = 60;
+        /** chunks/ · vision-frames/ 객체 보존 시간(분). 5분마다 도는 정리 작업이 이보다 오래된 객체를 삭제 */
+        private int retentionMinutes = 5;
     }
 
     @Getter

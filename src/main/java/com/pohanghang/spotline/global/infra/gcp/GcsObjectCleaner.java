@@ -12,39 +12,45 @@ import java.time.Instant;
 import java.util.List;
 
 /**
- * GCS의 chunks/ 객체를 1시간마다 정리한다(보존 시간 초과분 삭제).
- * storage.enabled가 켜져 청크가 실제로 업로드될 때만 동작하며,
+ * GCS의 chunks/ · vision-frames/ 객체를 5분마다 정리한다(보존 시간 초과분 삭제).
+ * storage.enabled가 켜져 객체가 실제로 업로드될 때만 동작하며,
  * 실패해도 경고만 남기고 다음 주기에 재시도한다.
  */
 @Component
-public class GcsChunkCleaner {
+public class GcsObjectCleaner {
 
-    private static final Logger log = LoggerFactory.getLogger(GcsChunkCleaner.class);
-    private static final String PREFIX = "chunks/";
+    private static final Logger log = LoggerFactory.getLogger(GcsObjectCleaner.class);
+    private static final List<String> PREFIXES = List.of("chunks/", "vision-frames/");
 
     private final GcpProperties props;
     private final GcpRest rest;
 
-    public GcsChunkCleaner(final GcpProperties props, final GcpRest rest) {
+    public GcsObjectCleaner(final GcpProperties props, final GcpRest rest) {
         this.props = props;
         this.rest = rest;
     }
 
-    // 매시 정각 실행
-    @Scheduled(cron = "0 0 * * * *", zone = "Asia/Seoul")
+    // 5분마다 실행
+    @Scheduled(cron = "0 */5 * * * *", zone = "Asia/Seoul")
     public void cleanup() {
         if (!props.getStorage().isEnabled()) {
             return;
         }
         final String bucket = props.getStorage().getBucket();
-        final int retentionMinutes = props.getStorage().getChunkRetentionMinutes();
+        final int retentionMinutes = props.getStorage().getRetentionMinutes();
         final Instant cutoff = Instant.now().minus(Duration.ofMinutes(retentionMinutes));
 
+        for (final String prefix : PREFIXES) {
+            cleanPrefix(bucket, prefix, retentionMinutes, cutoff);
+        }
+    }
+
+    private void cleanPrefix(final String bucket, final String prefix, final int retentionMinutes, final Instant cutoff) {
         try {
             int deleted = 0;
             String pageToken = null;
             do {
-                final ListResponse res = list(bucket, pageToken);
+                final ListResponse res = list(bucket, prefix, pageToken);
                 if (res == null) {
                     break;
                 }
@@ -62,15 +68,15 @@ public class GcsChunkCleaner {
                 pageToken = res.nextPageToken;
             } while (pageToken != null);
 
-            log.info("GCS 청크 정리 완료: {}개 삭제 (보존 {}분, 버킷 {})", deleted, retentionMinutes, bucket);
+            log.info("GCS 정리 완료[{}]: {}개 삭제 (보존 {}분, 버킷 {})", prefix, deleted, retentionMinutes, bucket);
         } catch (Exception e) {
-            log.warn("GCS 청크 정리 실패(무시, 다음 주기 재시도): {}", e.toString());
+            log.warn("GCS 정리 실패[{}](무시, 다음 주기 재시도): {}", prefix, e.toString());
         }
     }
 
-    private ListResponse list(final String bucket, final String pageToken) {
+    private ListResponse list(final String bucket, final String prefix, final String pageToken) {
         String url = "https://storage.googleapis.com/storage/v1/b/" + bucket
-                + "/o?prefix=" + URLEncoder.encode(PREFIX, StandardCharsets.UTF_8)
+                + "/o?prefix=" + URLEncoder.encode(prefix, StandardCharsets.UTF_8)
                 + "&fields=" + URLEncoder.encode("items(name,timeCreated),nextPageToken", StandardCharsets.UTF_8);
         if (pageToken != null) {
             url += "&pageToken=" + URLEncoder.encode(pageToken, StandardCharsets.UTF_8);
