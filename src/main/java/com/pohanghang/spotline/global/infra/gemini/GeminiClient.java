@@ -17,6 +17,7 @@ import reactor.util.retry.Retry;
 
 import java.io.IOException;
 import java.time.Duration;
+import java.util.List;
 
 @Component
 public class GeminiClient {
@@ -43,6 +44,18 @@ public class GeminiClient {
             throw new CustomException(ExceptionCode.INVALID_REQUEST);
         }
 
+        return postGenerateContent(GeminiRequestDto.of(prompt));
+    }
+
+    public String chat(final List<GeminiRequestDto.Content> contents, final String systemInstruction) {
+        if (contents == null || contents.isEmpty()) {
+            throw new CustomException(ExceptionCode.INVALID_REQUEST);
+        }
+
+        return postGenerateContent(GeminiRequestDto.ofChat(contents, systemInstruction));
+    }
+
+    private String postGenerateContent(final GeminiRequestDto request) {
         final String path = String.format(
                 "/v1/projects/%s/locations/%s/publishers/google/models/%s:generateContent",
                 projectId, location, model
@@ -53,7 +66,7 @@ public class GeminiClient {
                     .uri(path)
                     .header("Authorization", "Bearer " + getAccessToken())
                     .contentType(MediaType.APPLICATION_JSON)
-                    .bodyValue(GeminiRequestDto.of(prompt))
+                    .bodyValue(request)
                     .retrieve()
                     .bodyToMono(GeminiResponseDto.class)
                     .timeout(Duration.ofSeconds(30))
